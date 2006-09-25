@@ -9,20 +9,87 @@ use Test::More;
 use t::MockCPANDist;
 
 use Config;
-use File::pushd qw/pushd/;
+use File::Copy::Recursive qw/dircopy/;
 use File::Path qw/mkpath/;
+use File::pushd qw/pushd/;
 use File::Spec ();
 use File::Temp qw/tempdir/;
 use IO::CaptureOutput qw/capture/;
 use Probe::Perl ();
 
 
-my %distro_pass = (
-    'Bogus-Pass' => 1,
-    'Bogus-Fail' => 0,
+my @test_distros = (
+    # pass
+    {
+        name => 'Bogus-Pass',
+        eumm_success => 1,
+        eumm_grade => "pass",
+        mb_success => 1,
+        mb_grade => "pass",
+    },
+    {
+        name => 'Bogus-Test.pl-Pass',
+        eumm_success => 1,
+        eumm_grade => "pass",
+        mb_success => 1,
+        mb_grade => "pass",
+    },
+    # split pass/fail
+    {
+        name => 'Bogus-Test.pl-NoOutPass',
+        eumm_success => 1,
+        eumm_grade => "pass",
+        mb_success => 0,
+        mb_grade => "fail",
+    },
+    # fail
+    {
+        name => 'Bogus-Fail',
+        eumm_success => 0,
+        eumm_grade => "fail",
+        mb_success => 0,
+        mb_grade => "fail",
+    },
+    {
+        name => 'Bogus-Test.pl-NoOutFail',
+        eumm_success => 0,
+        eumm_grade => "fail",
+        mb_success => 0,
+        mb_grade => "fail",
+    },
+    {
+        name => 'Bogus-Test.pl-Fail',
+        eumm_success => 0,
+        eumm_grade => "fail",
+        mb_success => 0,
+        mb_grade => "fail",
+    },
+    {
+        name => 'Bogus-NoTestOutput',
+        eumm_success => 0,
+        eumm_grade => "fail",
+        mb_success => 0,
+        mb_grade => "fail",
+    },
+    # unknown
+    {
+        name => 'Bogus-NoTestDir',
+        eumm_success => 1,
+        eumm_grade => "unknown",
+        mb_success => 1,
+        mb_grade => "unknown",
+    },
+    {
+        name => 'Bogus-NoTestFiles',
+        eumm_success => 1,
+        eumm_grade => "unknown",
+        mb_success => 1,
+        mb_grade => "unknown",
+    },
+    # na -- TBD
 );
 
-plan tests => 4 + 4 * keys %distro_pass;
+plan tests => 4 + 7 * @test_distros;
 
 #--------------------------------------------------------------------------#
 # Fixtures
@@ -63,7 +130,7 @@ package Test::Reporter;
 sub new { print shift, "\n"; return bless {}, 'Test::Reporter::Mocked' }
 
 package Test::Reporter::Mocked;
-sub AUTOLOAD { return 1 }
+sub AUTOLOAD { return "1 mocked answer" }
 
 package main;
 
@@ -90,33 +157,54 @@ ok( $tiny->write( $config_file ),
 
 #--------------------------------------------------------------------------#
 # Scenarios to test
-#   * make/dmake test -- pass, fail, unknown, na
-#   * Build test -- pass, fail, unknown, na
+#   * make/dmake test --  na
+#   * Build test --  na
 #   * dmake and Build with test.pl -- aborts currently
 #   * dmake and Build with bad prereqs
 #--------------------------------------------------------------------------#
 
-for my $d ( keys %distro_pass ) {
+for my $case ( @test_distros ) {
+    # automate CPAN::Reporter prompting
     local $ENV{PERL_MM_USE_DEFAULT} = 1;
-    my $pass = $distro_pass{$d};
-    
-    my $wd = pushd( File::Spec->catdir( qw/t dist /, $d ) );
-    my $dist = t::MockCPANDist->new( %mock_dist, pretty_id => "Bogus::Pass" );
+
+    # clone dist directory -- avoids needing to cleanup source
+    my $dist_dir = File::Spec->catdir( qw/t dist /, $case->{name} );
+    my $work_dir = tempdir();
+    ok( dircopy($dist_dir, $work_dir),
+        "Copying $case->{name} to temporary build directory"
+    );
+
+    my $pushd = pushd $work_dir;
+
+    my $dist = t::MockCPANDist->new( %mock_dist, pretty_id => "Bogus::Module" );
     
     my ($stdout, $stderr, $makefile_rc, $test_make_rc);
     
-    capture sub {
-        $makefile_rc = ! system("$perl Makefile.PL");
-        $test_make_rc = CPAN::Reporter::test( $dist, "$make test" );
-        system("$make realclean");
-    }, \$stdout, \$stderr;
-    
+    eval {
+        capture sub {
+            $makefile_rc = do "Makefile.PL";
+            $test_make_rc = CPAN::Reporter::test( $dist, "$make test" );
+        }, \$stdout, \$stderr;
+        return 1;
+    } or diag "$@\n\nSTDOUT:\n$stdout\n\nSTDERR:\n$stderr\n";
+     
     ok( $makefile_rc,
-        "$d: Makefile.PL returned true"
+        "$case->{name}: Makefile.PL returned true"
     ); 
-    ok( $pass ? $test_make_rc : ! $test_make_rc, 
-        "$d: test('make test') returned $pass"
-    ); 
+
+    my $is_rc_correct = $case->{eumm_success} ? $test_make_rc : ! $test_make_rc;
+    my $is_grade_correct = $stdout =~ /^Test result is '$case->{eumm_grade}'/ms;
+
+    ok( $is_rc_correct, 
+        "$case->{name}: test('make test') returned $case->{eumm_success}"
+    );
+        
+    ok( $is_grade_correct, 
+        "$case->{name}: test('make test') grade reported as '$case->{eumm_grade}'"
+    );
+        
+    diag "STDOUT:\n$stdout\n\nSTDERR:\n$stderr\n" 
+        unless ( $is_rc_correct && $is_grade_correct );
     
     SKIP: {
 
@@ -127,17 +215,27 @@ for my $d ( keys %distro_pass ) {
         my ($build_rc, $test_build_rc);
         
         capture sub {
-            $build_rc = ! system("$perl Build.PL");
+            $build_rc = do "Build.PL";
             $test_build_rc = CPAN::Reporter::test( $dist, "$perl Build test" );
-            system("$perl Build realclean");
         }, \$stdout, \$stderr;
 
         ok( $build_rc,
-            "$d: Build.PL returned true"
+            "$case->{name}: Build.PL returned true"
         ); 
-        ok( $pass ? $test_build_rc : ! $test_build_rc, 
-            "$d: test('perl Build test') returned $pass"
+        
+        $is_rc_correct = $case->{mb_success} ? $test_build_rc : ! $test_build_rc;
+        $is_grade_correct = $stdout =~ /^Test result is '$case->{mb_grade}'/ms;
+
+        ok( $is_rc_correct, 
+            "$case->{name}: test('perl Build test') returned $case->{mb_success}"
         );
+            
+        ok( $is_grade_correct, 
+            "$case->{name}: test('perl Build test') grade reported as '$case->{mb_grade}'"
+        );
+        
+        diag "STDOUT:\n$stdout\n\nSTDERR:\n$stderr\n" 
+            unless ( $is_rc_correct && $is_grade_correct );
     }
     
 } 

@@ -1,8 +1,9 @@
 package CPAN::Reporter;
 use strict;
 
-$CPAN::Reporter::VERSION = $CPAN::Reporter::VERSION = "0.19";
+$CPAN::Reporter::VERSION = $CPAN::Reporter::VERSION = "0.20";
 
+use Config;
 use Config::Tiny ();
 use ExtUtils::MakeMaker qw/prompt/;
 use File::Basename qw/basename/;
@@ -161,29 +162,42 @@ sub test {
     my ($dist, $system_command) = @_;
     my $temp_out = File::Temp->new;
     
-    # XXX FAIL SAFE: can't get the result from teeing test.pl
-    # May change this later to report based on result, but with
-    # no detail
-    if ( -f "test.pl" ) {
-        warn "CPAN::Reporter can't report results for test.pl; continuing\n";
-        my $rc = system($system_command);
-        return $rc == 0;
-    }
-    
-    tee($system_command, { stderr => 1 }, $temp_out);
-    if ( ! open(TEST_RESULT, "<", $temp_out) ) {
-        warn "CPAN::Reporter couldn't read test results\n";
-        return;
-    }
     my $result = {
         dist => $dist,
         command => $system_command,
-        output => do { local $/; <TEST_RESULT> }
     };
-    close TEST_RESULT;
-    $result->{tests_ok} = $result->{output} =~ m{^All tests successful}ms;
+
+    # ExtUtils::MakeMaker runs test.pl directly, not through 
+    # Test Harness, so we have to rely on the result code for
+    # success instead of parsing.  So we run it directly without
+    # teeing and then fake the result output for the rest of 
+    # the reporting
+    if ( -f "test.pl" && $system_command =~ /$Config{make}/ ) {
+        warn "CPAN::Reporter can't report test.pl output " .
+             "using $Config{make}; continuing\n";
+        my $rc = system($system_command);
+        if ( $rc == 0 ) {
+            $result->{output} = "All tests successful.  (Success assumed " .
+                                "because test.pl exit code was 0.)\n";
+        }
+        else {
+            $result->{output} = "Failed tests.  (test.pl exit code was " .
+                                "non-zero.)  Detailed output could not be ".
+                                "captured with test.pl and make.";
+        }
+    }
+    # Otherwise, we can tee the command and generate the report normally
+    else { 
+        tee($system_command, { stderr => 1 }, $temp_out);
+        if ( ! open(TEST_RESULT, "<", $temp_out) ) {
+            warn "CPAN::Reporter couldn't read test results\n";
+            return;
+        }
+        $result->{output} = do { local $/; <TEST_RESULT> };
+        close TEST_RESULT;
+    }
     _process_report( $result );
-    return $result->{tests_ok};    
+    return $result->{success};    
 }
 
 
@@ -217,6 +231,57 @@ sub _get_config_options {
         }
     }
     return \%active;
+}
+
+#--------------------------------------------------------------------------#
+
+sub _grade_msg {
+    my ($grade, $msg) = @_;
+    print "Test result is '$grade'";
+    print ": $msg" if defined $msg && length $msg;
+    print ".\n";
+    return;
+}
+
+#--------------------------------------------------------------------------#
+
+sub _grade_report {
+    my $result = shift;
+    my ($grade,$msg);
+
+    # CPAN.pm won't normally test a failed 'make', so that should
+    # catch prereq failures that would normally be "unknown".
+    # XXX really should check in case test was forced
+    #
+    # Output strings taken from Test::Harness::
+    # _show_results()  -- for versions < 2.57_03 
+    # get_results()    -- for versions >= 2.57_03
+    
+    if ( $result->{output} =~ m{^All tests successful}ms ) {
+        $grade = 'pass';
+    }
+    elsif ( $result->{output} =~ m{^.?No tests defined}ms ) {
+        $grade = 'unknown';
+        $msg = 'No tests provided';
+    }
+    elsif ( $result->{output} =~ m{^FAILED--no tests were run}ms ) {
+        $grade = 'unknown';
+        $msg = 'No tests were run';
+    }
+    elsif ( $result->{output} =~ m{^FAILED--.*--no output}ms ) {
+        $grade = 'fail';
+        $msg = 'Tests had no output';
+    }
+    elsif ( $result->{output} =~ m{^Failed }ms ) {  # must be lowercase
+        $grade = 'fail';
+        $msg = "Distribution had failing tests";
+    }
+    else { # Fail safely if can't match any result string
+        $grade = 'unknown';
+        $msg = "Couldn't identify an outcome";
+    }
+    _grade_msg( $grade, $msg );
+    return $grade;
 }
 
 #--------------------------------------------------------------------------#
@@ -273,10 +338,16 @@ EMAIL_REQUIRED
     $result->{author} = $result->{dist}->author->fullname;
     $result->{author_id} = $result->{dist}->author->id;
     $result->{prereq_pm} = _prereq_report( $result );
-    
-    # Setup the test report
+
+    # Determine result
     print "Preparing a test report for $result->{dist_name}\n";
+    $result->{grade} = _grade_report($result);
+    $result->{success} =  $result->{grade} eq 'pass'
+                       || $result->{grade} eq 'unknown';
+
+    # Setup the test report
     my $tr = Test::Reporter->new;
+    $tr->grade( $result->{grade} );
     $tr->debug( $config->{debug} ) if defined $config->{debug};
     $tr->from( $config->{email_from} );
     $tr->address( $config->{email_to} ) if $config->{email_to};
@@ -287,28 +358,6 @@ EMAIL_REQUIRED
     
     # Populate the test report
     
-    # CPAN.pm won't normally test a failed 'make', so that should
-    # catch prereq failures that would normally be "unknown".
-    #
-    # Output strings taken from Test::Harness::
-    # _show_results()  -- for versions < 2.57_03 
-    # get_results()    -- for versions >= 2.57_03
-    
-    if ( $result->{tests_ok} ) {
-        $tr->grade( 'pass' );
-    }
-    elsif ( $result->{output} =~ m{^Failed }ms ) {  # must be lowercase
-        $tr->grade( 'fail' );
-    }
-    elsif ( $result->{output} =~ m{^FAILED--no tests were run}ms ) {
-        $tr->grade( 'unknown' );
-    }
-    elsif ( $result->{output} =~ m{^FAILED--.*--no output}ms ) {
-        $tr->grade( 'fail' );
-    }
-    else { # Fail safely if can't match any result string
-        $tr->grade( 'unknown' );
-    }
     $tr->distribution( $result->{dist_name}  );
     $tr->comments( _report_text( $result ) );
     $tr->via( 'CPAN::Reporter ' . $CPAN::Reporter::VERSION );
@@ -370,13 +419,14 @@ sub _report_text {
     my $output = << "ENDREPORT";
 Dear $data->{author},
     
-This is a computer-generated test report for $data->{dist_name}.
+This is a computer-generated test report for $data->{dist_name}, created
+automatically by CPAN::Reporter, version $CPAN::Reporter::VERSION.
 
 ENDREPORT
     
-    if ( $data->{tests_ok} ) { $output .= << "ENDREPORT"; 
+    if ( $data->{success} ) { $output .= << "ENDREPORT"; 
 Thank you for uploading your work to CPAN.  Congratulations!
-All tests were successfully.
+All tests were successful.
 
 ENDREPORT
     }
@@ -387,16 +437,30 @@ there were some problems testing your distribution.
 ENDREPORT
     }
     $output .= << "ENDREPORT";
+Sections of this report:
+
+    * Tester comments
+    * Prerequisites
+    * Test output
+
+------------------------------
+TESTER COMMENTS
+------------------------------
+
 Additional comments from tester: 
 
 [none provided]
 
---
+------------------------------
+PREREQUISITES
+------------------------------
 
 Prerequisite modules loaded:
 
 $data->{prereq_pm}
---
+------------------------------
+TEST OUTPUT
+------------------------------
 
 Output from '$data->{command}':
 
@@ -437,7 +501,7 @@ From the CPAN shell:
 CPAN::Reporter is an add-on for the CPAN.pm module that uses
 [Test::Reporter] to send the results of module tests to the CPAN
 Testers project.  Support for CPAN::Reporter is available in CPAN.pm 
-version 1.88.
+as of version 1.88.
 
 The goal of the CPAN Testers project ( [http://testers.cpan.org/] ) is to
 test as many CPAN packages as possible on as many platforms as
@@ -577,9 +641,9 @@ They are not imported during {use}.  Ordinary users will never need them.
  CPAN::Reporter::configure();
 
 Prompts the user to edit configuration settings stored in the CPAN::Reporter
-{config.ini} file.  Will create the configuration file if it does not 
-exist.  Automatically called by CPAN.pm when initializing the 'test_report'
-option:
+{config.ini} file.  It will create the configuration file if it does not exist.
+It is automatically called by CPAN.pm when initializing the 'test_report'
+option, e.g.:
 
  cpan> o conf init test_report
 
