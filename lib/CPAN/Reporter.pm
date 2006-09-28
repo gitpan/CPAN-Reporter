@@ -1,7 +1,7 @@
 package CPAN::Reporter;
 use strict;
 
-$CPAN::Reporter::VERSION = $CPAN::Reporter::VERSION = "0.20";
+$CPAN::Reporter::VERSION = $CPAN::Reporter::VERSION = "0.21";
 
 use Config;
 use Config::Tiny ();
@@ -167,39 +167,17 @@ sub test {
         command => $system_command,
     };
 
-    # ExtUtils::MakeMaker runs test.pl directly, not through 
-    # Test Harness, so we have to rely on the result code for
-    # success instead of parsing.  So we run it directly without
-    # teeing and then fake the result output for the rest of 
-    # the reporting
-    if ( -f "test.pl" && $system_command =~ /$Config{make}/ ) {
-        warn "CPAN::Reporter can't report test.pl output " .
-             "using $Config{make}; continuing\n";
-        my $rc = system($system_command);
-        if ( $rc == 0 ) {
-            $result->{output} = "All tests successful.  (Success assumed " .
-                                "because test.pl exit code was 0.)\n";
-        }
-        else {
-            $result->{output} = "Failed tests.  (test.pl exit code was " .
-                                "non-zero.)  Detailed output could not be ".
-                                "captured with test.pl and make.";
-        }
+    tee($system_command, { stderr => 1 }, $temp_out);
+    if ( ! open(TEST_RESULT, "<", $temp_out) ) {
+        warn "CPAN::Reporter couldn't read test results\n";
+        return;
     }
-    # Otherwise, we can tee the command and generate the report normally
-    else { 
-        tee($system_command, { stderr => 1 }, $temp_out);
-        if ( ! open(TEST_RESULT, "<", $temp_out) ) {
-            warn "CPAN::Reporter couldn't read test results\n";
-            return;
-        }
-        $result->{output} = do { local $/; <TEST_RESULT> };
-        close TEST_RESULT;
-    }
+    $result->{output} = do { local $/; <TEST_RESULT> };
+    close TEST_RESULT;
+
     _process_report( $result );
     return $result->{success};    
 }
-
 
 #--------------------------------------------------------------------------#
 # private functions
@@ -247,7 +225,7 @@ sub _grade_msg {
 
 sub _grade_report {
     my $result = shift;
-    my ($grade,$msg);
+    my ($grade,$is_make,$msg);
 
     # CPAN.pm won't normally test a failed 'make', so that should
     # catch prereq failures that would normally be "unknown".
@@ -256,7 +234,11 @@ sub _grade_report {
     # Output strings taken from Test::Harness::
     # _show_results()  -- for versions < 2.57_03 
     # get_results()    -- for versions >= 2.57_03
-    
+
+    # check for make or Build
+    $is_make = 1 if $result->{command} =~ m{make};
+        
+    # parse for Test::Harness results
     if ( $result->{output} =~ m{^All tests successful}ms ) {
         $grade = 'pass';
     }
@@ -276,10 +258,43 @@ sub _grade_report {
         $grade = 'fail';
         $msg = "Distribution had failing tests";
     }
-    else { # Fail safely if can't match any result string
-        $grade = 'unknown';
-        $msg = "Couldn't identify an outcome";
+    else {
+        # didn't find Test::Harness output we recognized
+        $grade = "unknown";
+        $msg = "Couldn't determine a result";
     }
+
+    # With test.pl and 'make test', any t/*.t might pass Test::Harness, but
+    # test.pl might still fail, or there might only be test.pl,
+    # so parse for make errors and reset the results from that
+    
+    if ( $is_make && -f "test.pl" && $grade ne 'fail' ) {
+        my ($make) = ($result->{command} =~ m{^(\S+)});
+        $make = basename($make);
+        if ( $result->{output} =~ m{^$make.*?:.*?error}ims ) {
+            $grade = "fail";
+            $msg = "'make test' error detected";
+        }
+        else {
+            $grade = "pass";
+            $msg = "'make test' had no errors";
+        }
+    }
+
+    # Downgrade failure if we can determine a cause of the failure
+    # that should be reported as 'na'
+
+    if ( $grade eq 'fail' ) {
+        if ( $result->{prereq_pm} =~ m{Not found}ims ) {
+            $grade = 'na';
+            $msg = 'Missing prerequisites';
+        }
+        elsif ( $result->{output} =~ m{Perl .*? required.*?this is only}ms ) {
+            $grade = 'na';
+            $msg = 'Perl version too low';
+        }
+    }
+
     _grade_msg( $grade, $msg );
     return $grade;
 }
@@ -539,6 +554,26 @@ with interactive configuration of CPAN::Reporter options.
 Once CPAN::Reporter is enabled and configured, test or install modules with
 CPAN.pm as usual.
 
+= UNDERSTANDING TEST GRADES
+
+CPAN::Reporter will assign one of the following grades to the report:
+
+* {pass} -- all tests were successful  
+
+* {fail} -- one or more tests failed, one or more test files died during
+testing or no test output was seen
+
+* {na} -- tests could not be run on this platform or one or more test files
+died because of missing prerequisites
+
+* {unknown} -- no test files could be found (either t/*.t or test.pl) or 
+a result could not be determined from test output
+
+In returning results to CPAN.pm, "pass" and "unknown" are considered successful
+attempts to "make test" or "Build test" and will not prevent installation.
+"fail" and "na" are considered to be failures and CPAN.pm will not install
+unless forced.
+
 = CONFIG FILE OPTIONS
 
 Default options for CPAN::Reporter are read from a configuration file 
@@ -654,13 +689,8 @@ option, e.g.:
 Given a CPAN::Distribution object and a system command to run distribution
 tests (e.g. "make test"), {test()} executes the command via {system()} while
 teeing the output to a file.  Based on the output captured in the file,
-{test()} generates and sends a [Test::Reporter] report.  It returns true if the
-captured output indicates that all tests passed and false, otherwise.
-
-= KNOWN ISSUES
-
-* Does not (yet) support reporting on {test.pl} files; will issue a warning 
-and continue
+{test()} generates and sends a [Test::Reporter] report.  It returns true if
+the test grade is "pass" or "unknown" and returns false, otherwise.
 
 = BUGS
 
