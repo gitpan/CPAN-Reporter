@@ -1,5 +1,8 @@
 TODO list for Perl module CPAN::Reporter
 
+- Check for system() call $? & 127 (only on Unix, though) or set a $SIG{INT}
+  handler (for Win32); abort test without sending
+
 - Need a more complete grade/option table
 
             pass    fail    unknown na
@@ -20,7 +23,8 @@ TODO list for Perl module CPAN::Reporter
   grade-lists without actions are taken to mean "yes" for those grades;
   "no" is the default fallback rule; default can be specified explicitly
 
-- Confirm up-to-date Test::Harness diagnostics
+- Confirm up-to-date Test::Harness diagnostics ( Note -- modern CPAN
+  may be forcing 2.62 in some situations, but not all)
 
 - Look at CPANPLUS::Internals::Constants::Reports and try to 
   replicate that logic

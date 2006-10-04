@@ -1,7 +1,7 @@
 package CPAN::Reporter;
 use strict;
 
-$CPAN::Reporter::VERSION = $CPAN::Reporter::VERSION = "0.24";
+$CPAN::Reporter::VERSION = $CPAN::Reporter::VERSION = "0.25";
 
 use Config;
 use Config::Tiny ();
@@ -86,6 +86,7 @@ HERE
         default => undef, # not written to starter config
     }
 );
+
 #--------------------------------------------------------------------------#
 # public API
 #--------------------------------------------------------------------------#
@@ -301,18 +302,22 @@ sub _grade_report {
     # that should be reported as 'na'
 
     if ( $grade eq 'fail' ) {
+        # check for perl version prerequisite or outright failure
+        if (
+            $result->{prereq_pm} =~ m{^\s+!\s+perl\s}ims ||
+            $result->{output} =~ m{Perl .*? required.*?this is only}ms
+        ) {
+            $grade = 'na';
+            $msg = 'Perl version too low';
+        }
         # check the prereq report for a failure flag (!)
-        if ( $result->{prereq_pm} =~ m{n/a}ims ) {
+        elsif ( $result->{prereq_pm} =~ m{n/a}ims ) {
             $grade = 'na';
             $msg = 'Prerequisite missing';
         }
         elsif ( $result->{prereq_pm} =~ m{^\s+!}ims ) {
             $grade = 'na';
             $msg = 'Prerequisite version too low';
-        }
-        elsif ( $result->{output} =~ m{Perl .*? required.*?this is only}ms ) {
-            $grade = 'na';
-            $msg = 'Perl version too low';
         }
     }
 
@@ -338,33 +343,75 @@ sub _open_config_file {
 }
 
 #--------------------------------------------------------------------------#
+# _prereq_report
+#--------------------------------------------------------------------------#
+
+# create support program
+my $version_finder = File::Temp->new;
+open VERSIONFINDER , ">$version_finder"
+    or die "Could not create temporary support program for versions: $!";
+print VERSIONFINDER << 'END';
+use strict;
+while ( @ARGV ) {
+    my ($mod, $need) = splice @ARGV, 0, 2;
+    print "$mod ";
+    if ( $mod eq "perl" ) { 
+        eval "use $need";
+        print $@ ? "0 " : "1 ";
+        print $], "\n";
+    }
+    else {
+        eval "use $mod qw()";
+        if ( $@ ) {
+            print "0 n/a\n";
+        }
+        else {
+            eval "use $mod $need qw()";
+            print $@ ? "0 " : "1 ";
+            print $mod->VERSION || 0, "\n";
+        }
+    }
+}
+END
+close VERSIONFINDER;
 
 sub _prereq_report {
-    my $data = shift;
-    my %prereq;
-    $prereq{requires} = $data->{dist}->prereq_pm;
+    my $dist = shift;
+    my %need = (
+        'requires' => $dist->prereq_pm,
+        'build_requires' => {},
+    );
+    my (%have, %prereq_met, $report);
     
     # unpack if subdivided in newer versions of CPAN.pm
     if ( 
-        join( q{ }, sort keys %{$prereq{requires}} ) eq 
+        join( q{ }, sort keys %{$need{requires}} ) eq 
         "build_requires requires" 
     ) {
-        $prereq{build_requires} = $prereq{requires}{build_requires};
-        $prereq{requires} = $prereq{requires}{requires};
+        $need{build_requires} = $need{requires}{build_requires};
+        $need{requires} = $need{requires}{requires};
     }
 
-    my ($name_width, $need_width, $have_width) = (6, 4, 4);
-    my (%have, $report);
-
-    # find formatting widths and get installed versions
+    # see what prereqs are satisfied in subprocess
     for my $section ( qw/requires build_requires/ ) {
-        for my $module ( keys %{ $prereq{$section} } ) {
+        my @prereq_list = %{$need{$section} };
+        next unless @prereq_list;
+        my $perl = Probe::Perl->find_perl_interpreter();
+        my @prereq_results = qx/$perl $version_finder @prereq_list/;
+        for my $line ( @prereq_results ) {
+            my ($mod, $met, $have) = split " ", $line;
+            $have{$section}{$mod} = $have;
+            $prereq_met{$section}{$mod} = $met;
+        }
+    }
+    
+    # find formatting widths 
+    my ($name_width, $need_width, $have_width) = (6, 4, 4);
+    for my $section ( qw/requires build_requires/ ) {
+        for my $module ( keys %{ $need{$section} } ) {
             my $name_length = length $module;
-            my $need_length = length $prereq{$section}{$module};
-            my $version = eval "require $module; return $module->VERSION";
-            $version = defined $version ? $version : "n/a";
-            my $have_length = length $version;
-            $have{$module} = $version;
+            my $need_length = length $need{$section}{$module};
+            my $have_length = length $have{$section}{$module};
             $name_width = $name_length if $name_length > $name_width;
             $need_width = $need_length if $need_length > $need_width;
             $have_width = $have_length if $have_length > $have_width;
@@ -376,7 +423,7 @@ sub _prereq_report {
 
     # generate the report
     for my $section ( qw/requires build_requires/ ) {
-        if ( keys %{ $prereq{$section} } ) {
+        if ( keys %{ $need{$section} } ) {
             $report .= "$section:\n\n";
             $report .= sprintf( $format_str, " ", qw/Module Need Have/ );
             $report .= sprintf( $format_str, " ", 
@@ -384,18 +431,14 @@ sub _prereq_report {
                                  "-" x $need_width,
                                  "-" x $have_width );
         }
-        for my $module ( keys %{ $prereq{$section} } ) {
-            my $need = $prereq{$section}{$module};
-            # can we satisfy the prereq?
-            eval "use $module $need";
-            # flag bad modules with "!" and for parsing later
-            my $bad = $@ ? "!" : " ";
+        for my $module ( sort { lc $a cmp lc $b } keys %{ $need{$section} } ) {
+            my $need = $need{$section}{$module};
+            my $have = $have{$section}{$module};
+            my $bad = $prereq_met{$section}{$module} ? " " : "!";
             $report .= 
-                sprintf( $format_str, $bad, $module, $need, $have{$module});
+                sprintf( $format_str, $bad, $module, $need, $have);
         }
-        print "\n";
     }
-    
     
     return $report || "    No requirements found\n";
 }
@@ -429,7 +472,7 @@ EMAIL_REQUIRED
     $result->{dist_name} =~ s/(\.tar\.gz|\.tgz|\.zip)$//i;
     $result->{author} = $result->{dist}->author->fullname;
     $result->{author_id} = $result->{dist}->author->id;
-    $result->{prereq_pm} = _prereq_report( $result );
+    $result->{prereq_pm} = _prereq_report( $result->{dist} );
 
     # Determine result
     print "Preparing a test report for $result->{dist_name}\n";
