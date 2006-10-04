@@ -1,7 +1,7 @@
 package CPAN::Reporter;
 use strict;
 
-$CPAN::Reporter::VERSION = $CPAN::Reporter::VERSION = "0.25";
+$CPAN::Reporter::VERSION = $CPAN::Reporter::VERSION = "0.26";
 
 use Config;
 use Config::Tiny ();
@@ -364,6 +364,11 @@ while ( @ARGV ) {
         eval "use $mod qw()";
         if ( $@ ) {
             print "0 n/a\n";
+        }
+        elsif ( $need == 0) {
+            # enough that it exists, don't check explicitly
+            # or modules without $VERSION will fail
+            print "1 ", $mod->VERSION || 0, "\n";
         }
         else {
             eval "use $mod $need qw()";
