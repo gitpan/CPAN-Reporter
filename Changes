@@ -1,5 +1,30 @@
 Revision history for Perl module CPAN::Reporter
 
+0.28_51 Mon Oct 23 23:47:33 EDT 2006
+
+    *** Backward compatibility warning: configuration options have changed
+        and config directory on OS X has changed ***
+    
+    - changed config directory on Mac OS X to ~/.cpanreporter instead of 
+      ~/Documents/.cpanreporter to be more like Unix; automatically moves
+      config file if old directory is detected
+
+    - change action prompt configuration option format to support grade-
+      specific actions
+    
+    - fixed success/failure parsing when recursive make output is included;
+      line parsing is now done in reverse and only the first matching line
+      is used
+
+    - changed perl version prerequisite logic; report will only be marked
+      "na" if a perl version was explicitly set in the prerequisites;
+      autodetection of low perl version was removed to eliminate spurious
+      matches from recursive makes
+
+    - added tests for report output format
+
+    - added TODO tests for improved option parsing
+    
 0.28 Sun Oct  8 12:47:46 EDT 2006
 
     - fixed test programs to force cleanup temp directories 
