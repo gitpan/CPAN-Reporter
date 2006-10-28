@@ -11,10 +11,10 @@ META.yml
 README
 t/01_CPAN_Reporter.t
 t/02_config_file.t
-t/03_option_parsing.t
-t/04_prompting.t
-t/05_prereq_pm.t
-t/10_report_output.t
+t/04_option_parsing.t
+t/05_prompting.t
+t/10_prereq_pm.t
+t/20_report_output.t
 t/50_test_report_pass.t
 t/51_test_report_fail.t
 t/52_test_report_unknown.t
@@ -63,6 +63,12 @@ t/dist/t-PrereqPerl-OK/Build.PL
 t/dist/t-PrereqPerl-OK/lib/Bogus/Module.pm
 t/dist/t-PrereqPerl-OK/Makefile.PL
 t/dist/t-PrereqPerl-OK/t/01_Bogus.t
+t/dist/t-Recurse/Build.PL
+t/dist/t-Recurse/lib/Bogus/Module.pm
+t/dist/t-Recurse/Makefile.PL
+t/dist/t-Recurse/subdir/Makefile.PL
+t/dist/t-Recurse/subdir/SubModule.pm
+t/dist/t-Recurse/t/01_Bogus.t
 t/dist/t-test.pl-Fail-Pass/Build.PL
 t/dist/t-test.pl-Fail-Pass/lib/Bogus/Module.pm
 t/dist/t-test.pl-Fail-Pass/Makefile.PL
