@@ -1,7 +1,7 @@
 package CPAN::Reporter;
 use strict;
 
-$CPAN::Reporter::VERSION = $CPAN::Reporter::VERSION = "0.29";
+$CPAN::Reporter::VERSION = $CPAN::Reporter::VERSION = "0.30";
 
 use Config;
 use Config::Tiny ();
@@ -271,6 +271,47 @@ sub test {
 #--------------------------------------------------------------------------#
 
 #--------------------------------------------------------------------------#
+# _env_report
+#--------------------------------------------------------------------------#
+
+# Entries bracketed with "/" are taken to be a regex; otherwise literal
+my @env_vars= qw(
+    /PERL/
+    /LC_/
+    LANG
+    LANGUAGE
+    PATH
+    SHELL
+    COMSPEC
+    TERM
+    AUTOMATED_TESTING
+    AUTHOR_TESTING
+    INCLUDE
+    LIB
+    LD_LIBRARY_PATH
+    PROCESSOR_IDENTIFIER
+    NUMBER_OF_PROCESSORS
+);
+
+sub _env_report {
+    my @vars_found;
+    for my $var ( @env_vars ) {
+        if ( $var =~ m{^/(.+)/$} ) {
+            push @vars_found, grep { /$1/ } keys %ENV;
+        }
+        else {
+            push @vars_found, $var if exists $ENV{$var};
+        }
+    }
+
+    my $report = "";
+    for my $var ( sort @vars_found ) {
+        $report .= "    $var = $ENV{$var}\n";
+    }
+    return $report;
+}
+
+#--------------------------------------------------------------------------#
 # _get_config_dir
 #--------------------------------------------------------------------------#
 
@@ -511,40 +552,6 @@ sub _parse_option {
 # _prereq_report
 #--------------------------------------------------------------------------#
 
-# create support program
-my $version_finder = File::Temp->new;
-open VERSIONFINDER , ">$version_finder"
-    or die "Could not create temporary support program for versions: $!";
-print VERSIONFINDER << 'END';
-use strict;
-while ( @ARGV ) {
-    my ($mod, $need) = splice @ARGV, 0, 2;
-    print "$mod ";
-    if ( $mod eq "perl" ) { 
-        eval "use $need";
-        print $@ ? "0 " : "1 ";
-        print $], "\n";
-    }
-    else {
-        eval "use $mod qw()";
-        if ( $@ ) {
-            print "0 n/a\n";
-        }
-        elsif ( $need == 0) {
-            # enough that it exists, don't check explicitly
-            # or modules without $VERSION will fail
-            print "1 ", $mod->VERSION || 0, "\n";
-        }
-        else {
-            eval "use $mod $need qw()";
-            print $@ ? "0 " : "1 ";
-            print $mod->VERSION || 0, "\n";
-        }
-    }
-}
-END
-close VERSIONFINDER;
-
 sub _prereq_report {
     my $dist = shift;
     my (%need, %have, %prereq_met, $report);
@@ -565,16 +572,14 @@ sub _prereq_report {
     }
 
     # see what prereqs are satisfied in subprocess
-    my $perl = Probe::Perl->find_perl_interpreter();
     for my $section ( qw/requires build_requires/ ) {
         next unless ref $need{$section} eq 'HASH';
         my @prereq_list = %{ $need{$section} };
         next unless @prereq_list;
-        my @prereq_results = qx/$perl $version_finder @prereq_list/;
-        for my $line ( @prereq_results ) {
-            my ($mod, $met, $have) = split " ", $line;
-            $have{$section}{$mod} = $have;
-            $prereq_met{$section}{$mod} = $met;
+        my $prereq_results = _version_finder( @prereq_list );
+        for my $mod ( keys %{$prereq_results} ) {
+            $have{$section}{$mod} = $prereq_results->{$mod}{have};
+            $prereq_met{$section}{$mod} = $prereq_results->{$mod}{met};
         }
     }
     
@@ -648,6 +653,8 @@ EMAIL_REQUIRED
     $result->{author} = $result->{dist}->author->fullname;
     $result->{author_id} = $result->{dist}->author->id;
     $result->{prereq_pm} = _prereq_report( $result->{dist} );
+    $result->{env_vars} = _env_report();
+    $result->{special_vars} = _special_vars_report();
 
     # Determine result
     print "Preparing a test report for $result->{dist_name}\n";
@@ -725,6 +732,33 @@ sub _prompt {
 # _report_text
 #--------------------------------------------------------------------------#
 
+my %intro_para = (
+    'pass' => <<'HERE',
+Thank you for uploading your work to CPAN.  Congratulations!
+All tests were successful.
+HERE
+
+    'fail' => <<'HERE',
+Thank you for uploading your work to CPAN.  However, it appears that
+there were some problems testing your distribution.
+HERE
+
+    'unknown' => << 'HERE',
+Thank you for uploading your work to CPAN.  However, attempting to
+test your distribution gave an inconclusive result.  This could be because
+you did not define tests (or tests could not be found), because
+your tests were interrupted before they finished, or because
+the results of the tests could not be parsed by CPAN::Reporter.
+HERE
+
+    'na' => << 'HERE',
+Thank you for uploading your work to CPAN.  However, it appears that
+your distribution tests are not fully supported on this machine, either 
+due to operating system limitations or missing prerequisite modules.
+HERE
+    
+);
+
 sub _report_text {
     my $data = shift;
     my $test_log = join(q{},@{$data->{output}});
@@ -733,27 +767,18 @@ sub _report_text {
 Dear $data->{author},
     
 This is a computer-generated test report for $data->{dist_name}, created
-automatically by CPAN::Reporter, version $CPAN::Reporter::VERSION.
+automatically by CPAN::Reporter, version $CPAN::Reporter::VERSION, and
+sent to the CPAN Testers mailing list.  If you have received this email 
+directly, it is because the person testing your distribution chose to send
+a copy to your CPAN email address.
 
-ENDREPORT
-    
-    if ( $data->{success} ) { $output .= << "ENDREPORT"; 
-Thank you for uploading your work to CPAN.  Congratulations!
-All tests were successful.
+$intro_para{ $data->{grade} }
 
-ENDREPORT
-    }
-    else { $output .=  <<"ENDREPORT";
-Thank you for uploading your work to CPAN.  However, it appears that
-there were some problems testing your distribution.
-
-ENDREPORT
-    }
-    $output .= << "ENDREPORT";
 Sections of this report:
 
     * Tester comments
     * Prerequisites
+    * Environment and other context
     * Test output
 
 ------------------------------
@@ -772,6 +797,16 @@ Prerequisite modules loaded:
 
 $data->{prereq_pm}
 ------------------------------
+ENVIRONMENT AND OTHER CONTEXT
+------------------------------
+
+Environment variables:
+
+$data->{env_vars}
+Perl special variables (and OS-specific diagnostics, for MSWin32):
+
+$data->{special_vars}
+------------------------------
 TEST OUTPUT
 ------------------------------
 
@@ -781,6 +816,28 @@ $test_log
 ENDREPORT
 
     return $output;
+}
+
+#--------------------------------------------------------------------------#
+# _special_vars_report
+#--------------------------------------------------------------------------#
+
+sub _special_vars_report {
+    my $special_vars = << "HERE";
+    Perl: \$^X = $^X
+    UID:  \$<  = $<
+    EUID: \$>  = $>
+    GID:  \$(  = $(
+    EGID: \$)  = $)
+HERE
+    if ( $^O eq 'MSWin32' && eval "require Win32" ) {
+        my @getosversion = Win32::GetOSVersion();
+        my $getosversion = join(", ", @getosversion);
+        $special_vars .= "    Win32::GetOSName = " . Win32::GetOSName() . "\n";
+        $special_vars .= "    Win32::GetOSVersion = $getosversion\n";
+        $special_vars .= "    Win32::IsAdminUser = " . Win32::IsAdminUser() . "\n";
+    }
+    return $special_vars;
 }
 
 #--------------------------------------------------------------------------#
@@ -828,6 +885,56 @@ sub _validate_grade_action {
 
     # otherwise, it all must be OK
     return map { $_ => $action } @grades;
+}
+
+#--------------------------------------------------------------------------#
+# _version_finder
+#--------------------------------------------------------------------------#
+
+my $version_finder = File::Temp->new;
+open VERSIONFINDER , ">$version_finder"
+    or die "Could not create temporary support program for versions: $!";
+print VERSIONFINDER << 'END';
+use strict;
+while ( @ARGV ) {
+    my ($mod, $need) = splice @ARGV, 0, 2;
+    print "$mod ";
+    if ( $mod eq "perl" ) { 
+        eval "use $need";
+        print $@ ? "0 " : "1 ";
+        print $], "\n";
+    }
+    else {
+        eval "use $mod qw()";
+        if ( $@ ) {
+            print "0 n/a\n";
+        }
+        elsif ( $need == 0) {
+            # enough that it exists, don't check explicitly
+            # or modules without $VERSION will fail
+            print "1 ", $mod->VERSION || 0, "\n";
+        }
+        else {
+            eval "use $mod $need qw()";
+            print $@ ? "0 " : "1 ";
+            print $mod->VERSION || 0, "\n";
+        }
+    }
+}
+END
+close VERSIONFINDER;
+
+sub _version_finder {
+    my @module_list = @_;
+    my $perl = Probe::Perl->find_perl_interpreter();
+    my @prereq_results = qx/$perl $version_finder @module_list/;
+    my %result;
+    for my $line ( @prereq_results ) {
+        my ($mod, $met, $have) = split " ", $line;
+        $result{$mod}{have} = $have;
+        $result{$mod}{met} = $met;
+    }
+    return \%result;
 }
 
 1; #this line is important and will help the module return a true value
@@ -892,12 +999,19 @@ CPAN::Reporter.
 
 If not prompted automatically, users should manually initialize CPAN::Reporter
 support.  After enabling CPAN::Reporter,  CPAN.pm will automatically continue
-with interactive configuration of CPAN::Reporter options.
+with interactive configuration of CPAN::Reporter options.  (Remember to 
+commit the CPAN configuration changes.)
 
  cpan> o conf init test_report
+ cpan> o conf commit
 
 Once CPAN::Reporter is enabled and configured, test or install modules with
-CPAN.pm as usual.
+CPAN.pm as usual.  
+
+For example, to force CPAN to repeat tests for CPAN::Reporter to see how it
+works:
+
+ cpan> force test CPAN::Reporter
 
 = UNDERSTANDING TEST GRADES
 

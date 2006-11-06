@@ -1,5 +1,16 @@
 Revision history for Perl module CPAN::Reporter
 
+0.30
+
+    - changed report output to have a different introductory paragraph for
+      each test grade to better clarify the meaning of 'unknown' and 'na'
+      results from testing
+
+    - added select environment variables and Perl special variables to
+      generated report
+
+    - added some addition clarifications in Pod
+
 0.29 Sat Oct 28 13:36:26 EDT 2006
 
     *** Backward compatibility warning: See below and 0.28_51 change log ***
