@@ -1,5 +1,10 @@
 Revision history for Perl module CPAN::Reporter
 
+0.34 Wed Nov  8 05:39:22 EST 2006
+
+    - fixed test skip block count when Module::Build is not installed
+      (reported by rinceWind)
+
 0.33 Tue Nov  7 07:37:08 EST 2006
 
     - Added Test::Harness and Test::More to the modules included as
@@ -122,7 +127,7 @@ Revision history for Perl module CPAN::Reporter
 
     - changed test.pl/ExtUtils::MakeMaker handling to wrap 'make test'
       execution with a standardized (parsable) string; does not run
-      best.pl twice anymore (Jonathan Rockway)
+      test.pl twice anymore (Jonathan Rockway)
 
     - added additional test distributions and added tests for diagnostic
       messages explaining each grade (coverage now > 90%)
