@@ -1,7 +1,7 @@
 package CPAN::Reporter;
 use strict;
 
-$CPAN::Reporter::VERSION = "0.37";
+$CPAN::Reporter::VERSION = "0.38";
 
 use Config;
 use Config::Tiny ();
@@ -263,7 +263,7 @@ sub test {
         open MAKEWRAP, ">$makewrapper"
             or die "Could not create a wrapper for make: $!";
         print MAKEWRAP qq{system('$system_command');\n};
-        print MAKEWRAP qq{print "makewrapper: make ", \$? ? "failed" : "ok";\n};
+        print MAKEWRAP qq{print "makewrapper: make ", \$? ? "failed" : "ok","\n"};
         close MAKEWRAP;
         $tee_input = Probe::Perl->find_perl_interpreter() .  " $makewrapper";
     }
@@ -280,7 +280,6 @@ sub test {
     $result->{output} = [ <TEST_RESULT> ];
     close TEST_RESULT;
 
-    $CPAN::Frontend->myprint("Preparing a test report for $result->{dist_name}\n");
     _expand_report( $result );
     _dispatch_report( $result );
 
@@ -299,6 +298,8 @@ sub test {
 
 sub _dispatch_report {
     my $result = shift;
+
+    $CPAN::Frontend->myprint("Preparing a test report for $result->{dist_name}\n");
 
     # Get configuration options
     my $config_obj = _open_config_file();
@@ -1060,7 +1061,7 @@ CPAN::Reporter is an add-on for the CPAN.pm module that uses
 Testers project.  Support for CPAN::Reporter is available in CPAN.pm 
 as of version 1.88.
 
-The goal of the CPAN Testers project ( [http://testers.cpan.org/] ) is to
+The goal of the CPAN Testers project ([http://testers.cpan.org/]) is to
 test as many CPAN packages as possible on as many platforms as
 possible.  This provides valuable feedback to module authors and
 potential users to identify bugs or platform compatibility issues and
