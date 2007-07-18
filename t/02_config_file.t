@@ -28,9 +28,9 @@ my $config_dir = File::Spec->catdir( $home_dir, ".cpanreporter" );
 my $config_file = File::Spec->catfile( $config_dir, "config.ini" );
 my $default_options = {
     email_from => '',
-    cc_author => 'default:yes pass:no',
-    edit_report => 'default:ask/no pass:no',
-    send_report => 'default:ask/yes pass:yes na:no',
+    cc_author => 'default:yes pass/na:no',
+    edit_report => 'default:ask/no pass/na:no',
+    send_report => 'default:ask/yes pass/na:yes',
     send_duplicates => 'default:no',
 };
 my @additional_prompts = qw/ smtp_server /;
@@ -74,7 +74,7 @@ is( capture(sub{CPAN::Reporter::_open_config_file()}, \$stdout, \$stderr),
     "opening non-existent file returns undef"
 );
 
-like( $stderr, "/^Couldn't read CPAN::Reporter configuration file/",
+like( $stdout, "/^Couldn't read CPAN::Reporter configuration file/",
     "opening non-existent file gives a warning"
 );
 
@@ -127,7 +127,7 @@ SKIP:
         );
     }
 
-    like( $stderr, "/Couldn't read CPAN::Reporter configuration file/",
+    like( $stdout, "/Couldn't read CPAN::Reporter configuration file/",
         "opening non-readable file gives a warning"
     );
 }
@@ -156,7 +156,7 @@ SKIP:
         );
     }
 
-    like( $stderr, "/Error writing config file/",
+    like( $stdout, "/Error writing config file/",
         "opening non-writeable file gives a warning"
     );
 }
