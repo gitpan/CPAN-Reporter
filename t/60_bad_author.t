@@ -8,6 +8,7 @@ select(STDOUT); $|=1;
 use Test::More;
 use t::MockCPANDist qw/bad_author/;
 use t::Helper;
+use t::Frontend;
 
 #--------------------------------------------------------------------------#
 # Fixtures
@@ -41,17 +42,17 @@ require_ok('CPAN::Reporter');
 
 test_fake_config();
 
-my $result = {};
-$result->{label} = "bad author";
-$result->{expected_grade} = "pass";
-$result->{dist} = $mock_dist;
-$result->{dist}{prereq_pm} = $result->{prereq_pm};
-$result->{command} = $command;
-$result->{output} = [ map {$_ . "\n" } 
+my $case = {};
+$case->{label} = "bad author";
+$case->{expected_grade} = "pass";
+$case->{dist} = $mock_dist;
+$case->{dist}{prereq_pm} = $case->{prereq_pm};
+$case->{command} = $command;
+$case->{output} = [ map {$_ . "\n" } 
                     split( "\n", $report_output) ];
-$result->{original} = $report_output;
+$case->{original} = $report_output;
 
-test_report( $result ); 
+my $result = test_report( $case ); 
  
 is( $result->{author}, "Author",
     "generic author name used"

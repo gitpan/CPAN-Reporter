@@ -1,5 +1,48 @@
 Revision history for Perl module CPAN::Reporter
 
+0.99_01 Tue Jul 31 22:28:25 EDT 2007
+    
+    *** DEVELOPMENT RELEASE FOR TESTING: Not recommended for general use ***
+        
+    * Major API additions and configuration changes in preparation for
+      adding Makefile/Build.PL and make/Build support into CPAN.pm 
+
+        * Deprecated test() function; test() separated into record_command()
+          and grade_test() functions to support CPAN.pm sending
+          reports from output generated indpendently from CPAN::Reporter,
+          e.g. CPAN.pm using Expect with distroprefs
+
+        * Added record_command() to wrap and tee a system() command and 
+          return results for further evaluation in grade_*() functions;
+          wrapping used to capture exit values that would otherwise be lost
+          from pipe to tee; will support CPAN inactivity timouts on both *nix
+          and Win32
+
+        * Added grade_PL() function to evaluate results of 'perl Makefile.PL'
+          or 'perl Build.PL'; recognizes 'require 5.xxxxx' and unsupported
+          OS error messages to be 'NA' as well as ordinary pass/fail outcomes
+
+        * Added grade_make() function to evaluate results of 'make' or
+          'Build'
+
+        * Added grade_test() function to evaluate results of 'make test'
+          or 'Build test' (refactored from old test() function)
+        
+        * Removed 'cc_author' and 'send_duplicates' options from normal
+          interactive configuration; defaults will be used unless set
+          manually in the configuration file
+
+    - separated documentation into separate API and Config files to
+      keep documentation simple in the primary CPAN::Reporter file
+
+    - added YAML & YAML::Syck to list of toolchain module versions
+      reported (i.e. determines if META.yml is used by CPAN.pm)
+
+    - began refactoring configuration code: moved configuration 
+      defaults and validation into Config.pm
+
+    - fixed bug in distribution-version string creation for .tar.bz2
+
 0.46 Tue Jul 17 22:05:50 EDT 2007
     
     *** Significant improvements to NA report handling ***
@@ -9,49 +52,68 @@ Revision history for Perl module CPAN::Reporter
 
     - Tests that fail with 'OS Unsupported' or 'No support for OS' are
       now correctly identified as NA
+    
     - FAIL/UNKNOWN grades results with unsatisfied prerequisites are 
       discarded immediately instead of being flagged as NA 
+    
     - changed default configurations to automatically send NA just like PASS 
+    
     - interactive configuration now always shows recommended options
       in addition to any prior configuration
+    
     - added CPAN Testers website and wiki to SEE ALSO in docs
+    
     - improved tests for detecting reports sent/not-sent
 
 0.45 Tue Jul  3 17:07:30 EDT 2007
+    
     - distribution tests that bailout now detected as FAIL instead of UNKNOWN
+    
     - UNKNOWN results when prereqs are missing are downgraded to NA
       (just like FAIL reports with missing prereqs already were)
 
 0.44 Sun Jun 17 22:05:46 EDT 2007
+    
     - searches through duplicate history file instead of loading as a hash
+    
     - added flocking to history file read/write 
       (and faked it for platforms that don't support flock)
+    
     - duplicate history includes $Config{perl_patchlevel} if it exists
 
 0.43 Tue Apr 24 22:55:32 EDT 2007
+    
     - enhanced duplicate tracking to include Perl version (suggested by
       David Cantrell)
     
 0.42 Tue Apr 24 00:27:56 EDT 2007
+    
     - added "send_duplicates" option with default "no"; compares CPAN Testers
       subject lines (grade, distribution, version and platform) to previous
       test results and skips sending duplicate reports
       
 0.41 Sun Mar 25 09:39:07 EDT 2007
+    
     - test reports will not be sent if the distribution name doesn't appear
       appear to be an actual distribution with version and archive suffix
       (Suggested by Barbie)
+    
     - refactored tests
+    
     - fixed ID format in mock CPAN::Distributions used in testing
 
 0.40 Wed Feb 28 23:30:13 EST 2007
+    
     - eliminated Perl::Critic level 5 and (most) level 4 complaints
+    
     - added defensive code in case CPAN.pm can't provide a valid Author
       object (Reported by David Cantrell)
     
 0.39 Sat Feb 10 19:28:13 EST 2007
+    
     - changed prereq version testing to better match approach used
       by CPAN.pm
+
     - added support for Module::Build-style extended prerequisite logic
       (e.g. ">= N.nn, !=M.mm" etc.)
 
