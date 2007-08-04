@@ -80,12 +80,11 @@ $class->new(
         'Probe::Perl'           => 0,
         'Tee'                   => 0.13,
         'Test::More'            => 0.45,   # thread-safe
-        'Test::Reporter'        => 1.30,
+        'Test::Reporter'        => 1.27,
     },
     meta_add            => { 
         no_index => { 
             file => [ qw{ 
-                lib/CPAN/Reporter/API.pm
                 lib/CPAN/Reporter/FAQ.pm
             } ],
             directory => [ 'examples' ],

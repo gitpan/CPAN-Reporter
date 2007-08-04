@@ -17,14 +17,7 @@ $|++;
 
 #--------------------------------------------------------------------------#
 
-my @api = qw(
-    configure 
-    grade_PL 
-    grade_make
-    grade_test 
-    record_command 
-    test 
-);
+my @api = qw/test configure/;
 
 plan tests =>  1 + @api ;
 

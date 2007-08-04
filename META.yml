@@ -1,6 +1,6 @@
 ---
 name: CPAN-Reporter
-version: 0.99_01
+version: 0.47_01
 author:
   - 'David A. Golden <dagolden@cpan.org>'
 abstract: Provides Test::Reporter support for CPAN.pm
@@ -22,20 +22,11 @@ requires:
   Probe::Perl: 0
   Tee: 0.13
   Test::More: 0.45
-  Test::Reporter: 1.3
+  Test::Reporter: 1.27
 provides:
   CPAN::Reporter:
     file: lib/CPAN/Reporter.pm
-    version: 0.99_01
-  CPAN::Reporter::API:
-    file: lib/CPAN/Reporter/API.pm
-    version: 0.99_01
-  CPAN::Reporter::Config:
-    file: lib/CPAN/Reporter/Config.pm
-    version: 0.99_01
-  CPAN::Reporter::FAQ:
-    file: lib/CPAN/Reporter/FAQ.pm
-    version: 0.99_01
+    version: 0.47_01
 generated_by: Module::Build version 0.2805
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.2.html
@@ -44,5 +35,4 @@ no_index:
   directory:
     - examples
   file:
-    - lib/CPAN/Reporter/API.pm
     - lib/CPAN/Reporter/FAQ.pm
