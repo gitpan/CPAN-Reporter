@@ -12,7 +12,7 @@ use File::Spec;
 use File::Temp qw/tempdir/;
 use t::Frontend;
 
-plan tests => 31;
+plan tests => 33;
 #plan 'no_plan';
 
 #--------------------------------------------------------------------------#
@@ -21,21 +21,22 @@ plan tests => 31;
 
 my $temp_home = tempdir( 
     "CPAN-Reporter-testhome-XXXXXXXX", TMPDIR => 1, CLEANUP => 1 
-);
+) or die "Couldn't create a temporary config directory: $!\nIs your temp drive full?";
 
 my $home_dir = File::Spec->rel2abs( $temp_home );
 my $config_dir = File::Spec->catdir( $home_dir, ".cpanreporter" );
 my $config_file = File::Spec->catfile( $config_dir, "config.ini" );
 my $default_options = {
     email_from => '',
-    cc_author => 'default:yes pass/na:no',
+#    cc_author => 'default:yes pass/na:no',
     edit_report => 'default:ask/no pass/na:no',
     send_report => 'default:ask/yes pass/na:yes',
-    send_duplicates => 'default:no',
+#    send_duplicates => 'default:no',
 };
 my @additional_prompts = qw/ smtp_server /;
 
 my ($rc, $stdout, $stderr);
+
 
 #--------------------------------------------------------------------------#
 # Mocking -- override support/system functions
@@ -80,9 +81,12 @@ like( $stdout, "/^Couldn't read CPAN::Reporter configuration file/",
 
 {
     local $ENV{PERL_MM_USE_DEFAULT} = 1;  # use prompt defaults
-    ok( $rc = capture(sub{CPAN::Reporter::configure()}, \$stdout, \$stderr),
-        "configure() returned true"
-    );
+    eval {
+        ok( $rc = capture(sub{CPAN::Reporter::configure()}, \$stdout, \$stderr),
+            "configure() returned true"
+        );
+    };
+    diag "STDOUT:\n$stdout\nSTDERR:$stderr\n" if $@; 
 }
 
 for my $option ( keys %$default_options, @additional_prompts) {
@@ -95,7 +99,7 @@ is( ref $rc, 'HASH',
     "configure() returned a hash reference"
 );
 
-is_deeply( CPAN::Reporter::_get_config_options(), $default_options,
+is_deeply( $rc, $default_options,
     "configure return value has expected defaults"
 );
 
@@ -103,9 +107,11 @@ ok( -f $config_file,
     "configuration successfully created a config file"
 );
 
-is_deeply( CPAN::Reporter::_get_config_options(), $default_options,
+my $new_config = Config::Tiny->read( $config_file );
+is_deeply( $new_config->{_}, $default_options,
     "newly created config file has expected defaults"
 );
+
 
 #--------------------------------------------------------------------------#
 # check error handling if not readable
@@ -217,6 +223,47 @@ SKIP:
 
     is( $tiny->{_}{debug}, $bogus_debug,
         "updated config file preserved debug value"
+    );
+}
+
+#--------------------------------------------------------------------------#
+# confirm _get_config_options handles bad action pair validation
+#--------------------------------------------------------------------------#
+
+SKIP:
+{
+    skip "Couldn't set config file writable again; skipping additional tests", 4
+        if ! -w $config_file;
+
+    my $bogus_email = 'nobody@nowhere.com';
+    my $bogus_smtp = 'mail.mail.com';
+    my $bogus_debug = 1;
+
+    my $tiny = Config::Tiny->read( $config_file );
+    $tiny->{_}{email_from} = $bogus_email;
+    $tiny->{_}{cc_author} = "invalid:invalid";
+
+    ok( $tiny->write( $config_file ),
+        "updated config file with a bad cc_author setting"
+    );
+
+    $tiny = Config::Tiny->read( $config_file );
+    my $parsed_config;
+    capture sub{         
+        $parsed_config = CPAN::Reporter::_get_config_options( $tiny );
+    }, \$stdout, \$stderr;
+
+    like( $stdout, "/Invalid option 'invalid:invalid' in 'cc_author'. Using default instead./",
+        "bad option warning seen"
+    );
+
+    is( $parsed_config->{cc_author}, "default:yes pass/na:no",
+        "cc_author default returned"
+    );
+
+    $tiny = Config::Tiny->read( $config_file );
+    is( $tiny->{_}{cc_author}, "invalid:invalid",
+        "bad cc_author preserved in config.ini"
     );
 }
 
