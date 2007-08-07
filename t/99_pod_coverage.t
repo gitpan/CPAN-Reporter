@@ -1,5 +1,6 @@
 use Test::More;
-use t::Helper; # Fake homedir, other mocks
+use t::Helper;
+plan skip_all => "Skipping author tests" if not $ENV{AUTHOR_TESTING};
 
 my $min_tpc = 1.08;
 eval "use Test::Pod::Coverage $min_tpc";
@@ -11,4 +12,6 @@ eval "use Pod::Coverage $min_pc";
 plan skip_all => "Pod::Coverage $min_pc required for testing POD coverage"
     if $@;
 
-all_pod_coverage_ok( { pod_from => 'lib/CPAN/Reporter/API.pod' } );
+all_pod_coverage_ok();
+__END__
+use Test::Pod::Coverage; # Fake CPANTS

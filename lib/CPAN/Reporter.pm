@@ -1,7 +1,7 @@
 package CPAN::Reporter;
 use strict;
 
-$CPAN::Reporter::VERSION = '0.99_02'; 
+$CPAN::Reporter::VERSION = '0.48'; 
 
 use Config;
 use Config::Tiny ();
@@ -10,14 +10,45 @@ use Fcntl qw/:flock :seek/;
 use File::Basename qw/basename/;
 use File::HomeDir ();
 use File::Path qw/mkpath rmtree/;
-use File::Spec ();
 use File::Temp ();
 use IO::File ();
 use Probe::Perl ();
 use Symbol qw/gensym/;
 use Tee qw/tee/;
 use Test::Reporter ();
-use CPAN::Reporter::Config ();
+
+#--------------------------------------------------------------------------#
+# Back-compatibility checks -- just once per load
+#--------------------------------------------------------------------------#
+
+# 0.28_51 changed Mac OS X config file location -- if old directory is found,
+# move it to the new location
+if ( $^O eq 'darwin' ) {
+    my $old = File::Spec->catdir(File::HomeDir->my_documents,".cpanreporter");
+    my $new = File::Spec->catdir(File::HomeDir->my_home,".cpanreporter");
+    if ( ( -d $old ) && (! -d $new ) ) {
+        $CPAN::Frontend->mywarn( << "HERE");
+Since CPAN::Reporter 0.28_51, the Mac OSX config directory has changed. 
+
+  Old: $old
+  New: $new  
+
+Your existing configuration file will be moved automatically.
+HERE
+        mkpath($new);
+        my $OLD_CONFIG = IO::File->new(
+            File::Spec->catfile($old, "config.ini"), "<"
+        ) or die $!;
+        my $NEW_CONFIG = IO::File->new(
+            File::Spec->catfile($new, "config.ini"), ">"
+        ) or die $!;
+        $NEW_CONFIG->print( do { local $/; <$OLD_CONFIG> } );
+        $OLD_CONFIG->close;
+        $NEW_CONFIG->close;
+        unlink File::Spec->catfile($old, "config.ini") or die $!;
+        rmdir($old) or die $!;
+    }
+}
 
 #--------------------------------------------------------------------------#
 # Some platforms don't implement flock, so fake it if necessary
@@ -25,13 +56,121 @@ use CPAN::Reporter::Config ();
 
 BEGIN {
     eval {
-        my $fh = File::Temp->new() or return;
+        my $fh = File::Temp->new();
         flock $fh, LOCK_EX;
     };
     if ( $@ ) {
         *CORE::GLOBAL::flock = sub () { 1 };
     }
 }
+
+
+#--------------------------------------------------------------------------#
+# defaults and prompts
+#--------------------------------------------------------------------------#
+
+# undef defaults are not written to the starter configuration file
+
+my @config_order = qw/ email_from cc_author edit_report send_report
+                       send_duplicates smtp_server /;
+
+my $grade_action_prompt = << 'HERE'; 
+
+Some of the following configuration options require one or more "grade:action"
+pairs that determine what grade-specific action to take for that option.
+These pairs should be space-separated and are processed left-to-right. See
+CPAN::Reporter documentation for more details.
+
+    GRADE   :   ACTION  ======> EXAMPLES        
+    -------     -------         --------    
+    pass        yes             default:no
+    fail        no              default:yes pass:no
+    unknown     ask/no          default:ask/no pass:yes fail:no
+    na          ask/yes         
+    default
+
+HERE
+
+my %defaults = (
+    email_from => {
+        default => '',
+        prompt => 'What email address will be used for sending reports?',
+        info => <<'HERE',
+CPAN::Reporter requires a valid email address as the return address
+for test reports sent to cpan-testers\@perl.org.  Either provide just
+an email address, or put your real name in double-quote marks followed 
+by your email address in angle marks, e.g. "John Doe" <jdoe@nowhere.com>.
+Note: unless this email address is subscribed to the cpan-testers mailing
+list, your test reports will not appear until manually reviewed.
+HERE
+    },
+    cc_author => {
+        default => 'default:yes pass/na:no',
+        prompt => "Do you want to CC the the module author?",
+        validate => 1,
+        info => <<'HERE',
+If you would like, CPAN::Reporter will copy the module author with
+the results of your tests.  By default, authors are copied only on 
+failed/unknown results. This option takes "grade:action" pairs.  
+HERE
+    },
+    edit_report => {
+        default => 'default:ask/no pass/na:no',
+        prompt => "Do you want to edit the test report?",
+        validate => 1,
+        info => <<'HERE',
+Before test reports are sent, you may want to edit the test report
+and add additional comments about the result or about your system or
+Perl configuration.  By default, CPAN::Reporter will ask after
+each report is generated whether or not you would like to edit the 
+report. This option takes "grade:action" pairs.
+HERE
+    },
+    send_report => {
+        default => 'default:ask/yes pass/na:yes',
+        prompt => "Do you want to send the test report?",
+        validate => 1,
+        info => <<'HERE',
+By default, CPAN::Reporter will prompt you for confirmation that
+the test report should be sent before actually emailing the 
+report.  This gives the opportunity to bypass sending particular
+reports if you need to (e.g. if you caused the failure).
+This option takes "grade:action" pairs.
+HERE
+    },
+    send_duplicates => {
+        default => 'default:no',
+        prompt => "This report is identical to a previous one.  Send it anyway?",
+        validate => 1,
+        info => <<'HERE',
+CPAN::Reporter records tests grades for each distribution, version and
+platform.  By default, duplicates of previous results will not be sent at
+all, regardless of the value of the "send_report" option.  This option takes 
+"grade:action" pairs.
+HERE
+    },
+    smtp_server => {
+        default => undef, # not written to starter config
+        info => <<'HERE',
+If your computer is behind a firewall or your ISP blocks
+outbound mail traffic, CPAN::Reporter will not be able to send
+test reports unless you provide an alternate outbound (SMTP) 
+email server.  Enter the full name of your outbound mail server
+(e.g. smtp.your-ISP.com) or leave this blank to send mail 
+directly to perl.org.  Use a space character to reset an existing
+default.
+HERE
+    },
+    email_to => {
+        default => undef, # not written to starter config
+    },
+    editor => {
+        default => undef, # not written to starter config
+    },
+    debug => {
+        default => undef, # not written to starter config
+    }
+);
 
 #--------------------------------------------------------------------------#
 # public API
@@ -40,20 +179,14 @@ BEGIN {
 sub configure {
     my $config_dir = _get_config_dir();
     my $config_file = _get_config_file();
-    
+
     mkpath $config_dir if ! -d $config_dir;
-    if ( ! -d $config_dir ) {
-        $CPAN::Frontend->myprint(
-            "\nCouldn't create configuration directory '$config_dir': $!"
-        );
-        return;
-    }
 
     my $config;
     my $existing_options;
     
     # explain grade:action pairs
-    $CPAN::Frontend->myprint( CPAN::Reporter::Config::_grade_action_prompt() );
+    $CPAN::Frontend->myprint( $grade_action_prompt );
     
     # read or create
     if ( -f $config_file ) {
@@ -61,14 +194,13 @@ sub configure {
             "\nFound your CPAN::Reporter config file at:\n$config_file\n"
         );
         $config = _open_config_file();
-        # if we can't read it, bail out
-        if ( ! $config ) {
+        $existing_options = _get_config_options( $config ) if $config;
+        # if a file exists, but we can't open it or read it, then stop
+        if ( ! ( $config && $existing_options) ) {
             $CPAN::Frontend->mywarn("\n
                 CPAN::Reporter configuration will not be changed\n");
             return;
         }
-        # clone what's in the config file
-        $existing_options = { %{$config->{_}} } if $config;
         $CPAN::Frontend->myprint(
             "\nUpdating your CPAN::Reporter configuration settings:\n"
         );
@@ -80,10 +212,8 @@ sub configure {
         $config = Config::Tiny->new();
     }
     
-    my %spec = CPAN::Reporter::Config::_config_spec();
-
-    for my $k ( CPAN::Reporter::Config::_config_order() ) {
-        my $option_data = $spec{$k};
+    for my $k ( @config_order ) {
+        my $option_data = $defaults{$k};
         $CPAN::Frontend->myprint( "\n" . $option_data->{info}. "\n");
         # options with defaults are mandatory
         if ( defined $option_data->{default} ) {
@@ -95,18 +225,21 @@ sub configure {
             }
             # repeat until validated
             PROMPT:
-            while ( defined ( 
-                my $answer = CPAN::Shell::colorable_makemaker_prompt(
-                    "$k?", 
-                    $existing_options->{$k} || $option_data->{default} 
-                )
-            )) {
-                if  ( ! $option_data->{validate} ||
-                        $option_data->{validate}->($k, $answer)
-                    ) {
-                    $config->{_}{$k} = $answer;
-                    last PROMPT;
+            while ( my $answer = CPAN::Shell::colorable_makemaker_prompt(
+                "$k?", 
+                $existing_options->{$k} || $option_data->{default} )
+            ) 
+            {
+                if ( $defaults{$k}{validate} ) {
+                    for my $ga ( split q{ }, $answer ) {
+                        if ( ! _validate_grade_action( $ga ) ) {
+                            $CPAN::Frontend->mywarn( "\nInvalid option '$ga' in '$k'\n\n" );
+                            next PROMPT;
+                        }
+                    }
                 }
+                $config->{_}{$k} = $answer;
+                last PROMPT;
             }
         }
         else {
@@ -151,29 +284,41 @@ sub configure {
     }
 }
 
-sub grade_make {
-    my $result = _init_result( @_ );
-    _compute_make_grade($result);
-    _print_grade_msg($result->{is_make} ? $Config{make} : 'Build' , $result);
-    if( $result->{grade} ne 'pass' ) {
-        _dispatch_report( $result );
-    }
-    return $result->{success};
-}
+sub test {
+    my ($dist, $system_command) = @_;
+    my $temp_out = File::Temp->new;
+    
+    my $result = {
+        dist => $dist,
+        command => $system_command,
+    };
 
-sub grade_PL {
-    my $result = _init_result( @_ );
-    _compute_PL_grade($result);
-    _print_grade_msg($result->{PL_file} , $result);
-    if( $result->{grade} ne 'pass' ) {
-        _dispatch_report( $result );
+    my ($tee_input, $makewrapper);
+    
+    if ( -f "test.pl" && _is_make($system_command) ) {
+        $makewrapper = File::Temp->new
+            or die "Could not create a wrapper for make: $!";
+        print $makewrapper qq{system('$system_command');\n};
+        print $makewrapper qq{print "makewrapper: make ", \$? ? "failed" : "ok","\n"};
+        $makewrapper->close;
+        $tee_input = Probe::Perl->find_perl_interpreter() .  " $makewrapper";
     }
-    return $result->{success};
-}
+    else {
+        $tee_input = $system_command;
+    }
+    
+    tee($tee_input, { stderr => 1 }, $temp_out);
+        
+    my $TEST_RESULT = IO::File->new($temp_out->filename, "<");
+    if ( !$TEST_RESULT ) {
+        $CPAN::Frontend->mywarn( "CPAN::Reporter couldn't read test results\n" );
+        return;
+    }
+    $result->{output} = [ <$TEST_RESULT> ];
+    $TEST_RESULT->close;
 
-sub grade_test {
-    my $result = _init_result( @_ );
-    _compute_test_grade($result);
+    _expand_report( $result );
+    
     if ( $result->{grade} eq 'discard' ) {
         $CPAN::Frontend->mywarn( 
             "\nTest results were not valid: $result->{grade_msg}\n\n",
@@ -182,251 +327,16 @@ sub grade_test {
         );
     }
     else {
-        _print_grade_msg( "Test", $result );
+        _grade_msg( $result );
         _dispatch_report( $result );
     }
-    return $result->{success};
-}
 
-sub record_command {
-    my ($command, $timeout) = @_;
-
-    my ($cmd, $redirect) = _split_redirect($command);
-
-    my $temp_out = File::Temp->new
-        or die "Could not create a temporary file for output: $!";
-
-    # Teeing a command loses its exit value so we must wrap the command 
-    # and print the exit code so we can read it off of output
-    my $cmdwrapper = File::Temp->new
-        or die "Could not create a wrapper for $cmd\: $!";
-
-    my $wrap_code;
-    if ( $timeout ) {
-        $wrap_code = $^O eq 'MSWin32'
-                   ? _timeout_wrapper_win32($cmd, $timeout)
-                   : _timeout_wrapper($cmd, $timeout);
-        warn "$wrap_code\n";
-    }
-    # if no timeout or timeout wrap code wasn't available
-    if ( ! $wrap_code ) {
-        $wrap_code = << "HERE";
-system('$cmd');
-print '($cmd exited with ', \$?, ")\\n";
-HERE
-    }
-
-    print {$cmdwrapper} $wrap_code;
-    $cmdwrapper->close;
-    
-    # tee the command wrapper
-    my $tee_input = Probe::Perl->find_perl_interpreter() .  " $cmdwrapper";
-    $tee_input .= " $redirect" if defined $redirect;
-    tee($tee_input, { stderr => 1 }, $temp_out);
-        
-    # read back the output
-    my $temp_out2 = IO::File->new($temp_out->filename, "<");
-    if ( !$temp_out2 ) {
-        $CPAN::Frontend->mywarn( 
-            "CPAN::Reporter couldn't read command results for '$cmd'\n" 
-        );
-        return;
-    }
-    my @cmd_output = <$temp_out2>;
-    if ( ! @cmd_output ) {
-        $CPAN::Frontend->mywarn( 
-            "CPAN::Reporter didn't capture command results for '$cmd'\n"
-        );
-        return;
-    }
-
-    # extract the exit value
-    my $exit_value;
-    if ( $cmd_output[-1] =~ m{exited with} ) {
-        ($exit_value) = $cmd_output[-1] =~ m{exited with ([-0-9]+)};
-        delete $cmd_output[-1];
-    }
-
-    return \@cmd_output, $exit_value;
-}
-
-sub test {
-    my ($dist, $system_command) = @_;
-    my ($output, $exit_value) = record_command( $system_command );
-    unless ( defined $output && defined $exit_value ) {
-        $CPAN::Frontend->mywarn(
-            "CPAN::Reporter had errors capturing output. Tests abandoned"
-        );
-        return;
-    }
-    grade_test( $dist, $system_command, $output, $exit_value );
+    return $result->{success};   # from _expand_report 
 }
 
 #--------------------------------------------------------------------------#
 # private functions
 #--------------------------------------------------------------------------#
-
-#--------------------------------------------------------------------------#
-# _compute_PL_grade
-#--------------------------------------------------------------------------#
-
-sub _compute_make_grade {
-    my $result = shift;
-    my ($grade,$msg);
-    if ( $result->{exit_value} ) {
-        $result->{grade} = "fail";
-        $result->{grade_msg} = "Stopped with an error"
-    }
-    else {
-        $result->{grade} = "pass";
-        $result->{grade_msg} = "No errors"
-    }
-    $result->{success} = $result->{grade} eq "pass" ? 1 : 0;
-    return;
-}
-
-sub _compute_PL_grade {
-    my $result = shift;
-    my ($grade,$msg);
-    if ( $result->{exit_value} ) {
-        if (grep /Perl .*? required.*?--this is only .*?/, @{$result->{output}}) {
-            $result->{grade} = "na";
-            $result->{grade_msg} = "Perl version too low";
-        }
-        elsif ( grep /OS Unsupported|No support for OS/i, 
-                    @{$result->{output}}) {
-            $result->{grade} = "na";
-            $result->{grade_msg} = "This platform is not supported"
-        }
-        else {
-            $result->{grade} = "fail";
-            $result->{grade_msg} = "Stopped with an error"
-        }
-    }
-    else {
-        $result->{grade} = "pass";
-        $result->{grade_msg} = "No errors"
-    }
-    $result->{success} = $result->{grade} eq "pass" ? 1 : 0;
-    return;
-}
-
-#--------------------------------------------------------------------------#
-# _compute_test_grade
-#--------------------------------------------------------------------------#
-
-sub _compute_test_grade {
-    my $result = shift;
-    my ($grade,$msg);
-    my $output = $result->{output};
-    
-    # we need to know prerequisites early
-    _expand_result( $result );
-
-    # Output strings taken from Test::Harness::
-    # _show_results()  -- for versions < 2.57_03 
-    # get_results()    -- for versions >= 2.57_03
-
-    # XXX don't shortcut to unknown with _has_tests here because a custom
-    # Makefile.PL or Build.PL might define tests in a non-standard way
-    
-    # check for make or Build
-    
-    # parse in reverse order for Test::Harness results
-    for my $i ( reverse 0 .. $#{$output} ) {
-        if ( $output->[$i] =~ m{^All tests successful}ms ) {
-            $grade = 'pass';
-            $msg = 'All tests successful';
-        }
-        elsif ( $output->[$i] =~ m{No support for OS|OS unsupported}ims ) {
-            $grade = 'na';
-            $msg = 'This platform is not supported';
-        }
-        elsif ( $output->[$i] =~ m{^.?No tests defined}ms ) {
-            $grade = 'unknown';
-            $msg = 'No tests provided';
-        }
-        elsif ( $output->[$i] =~ m{^FAILED--no tests were run}ms ) {
-            $grade = 'unknown';
-            $msg = 'No tests were run';
-        }
-        elsif ( $output->[$i] =~ m{^FAILED--.*--no output}ms ) {
-            $grade = 'fail';
-            $msg = 'Tests had no output';
-        }
-        elsif ( $output->[$i] =~ m{FAILED--Further testing stopped}ms ) {
-            $grade = 'fail';
-            $msg = 'Bailed out of tests';
-        }
-        elsif ( $output->[$i] =~ m{^Failed }ms ) {  # must be lowercase
-            $grade = 'fail';
-            $msg = "Distribution had failing tests";
-        }
-        else {
-            next;
-        }
-        if ( $grade eq 'unknown' && _has_tests() ) {
-            # probably a spurious message from recursive make, so ignore and
-            # continue if we can find any standard test files
-            $grade = $msg = undef;
-            next;
-        }
-        last if $grade;
-    }
-    
-    # didn't find Test::Harness output we recognized
-    if ( ! $grade ) {
-        $grade = "unknown";
-        $msg = "Couldn't determine a result";
-    }
-
-    # With test.pl and 'make test', any t/*.t might pass Test::Harness, but
-    # test.pl might still fail, or there might only be test.pl,
-    # so use exit code directly
-    
-    if ( $result->{is_make} && -f "test.pl" && $grade ne 'fail' ) {
-        if ( $result->{exit_value} ) {
-            $grade = "fail";
-            $msg = "'make test' error detected";
-        }
-        else {
-            $grade = "pass";
-            $msg = "'make test' no errors";
-        }
-    }
-
-    # Downgrade failure/unknown grade if we can determine a cause
-    # If perl version is too low => 'na'
-    # If stated prereqs missing => 'discard'
-
-    if ( $grade eq 'fail' || $grade eq 'unknown' ) {
-        # check for unsupported OS
-        if ( $output =~ m{No support for OS|OS unsupported}ims ) {
-            $grade = 'na';
-            $msg = 'This platform is not supported';
-        }
-        # check for perl version prerequisite or outright failure
-        if ( $result->{prereq_pm} =~ m{^\s+!\s+perl\s}ims ) {
-            $grade = 'na';
-            $msg = 'Perl version too low';
-        }
-        # check the prereq report for missing or failure flag '!'
-        elsif ( $result->{prereq_pm} =~ m{n/a}ims ) {
-            $grade = 'discard';
-            $msg = 'Prerequisite missing';
-        }
-        elsif ( $result->{prereq_pm} =~ m{^\s+!}ims ) {
-            $grade = 'discard';
-            $msg = 'Prerequisite version too low';
-        }
-    }
-
-    $result->{grade} = $grade;
-    $result->{grade_msg} = $msg;
-    $result->{success} =  $result->{grade} eq 'pass'
-                       || $result->{grade} eq 'unknown';
-    return;
-}
 
 #--------------------------------------------------------------------------#
 # _dispatch_report
@@ -437,9 +347,7 @@ sub _compute_test_grade {
 sub _dispatch_report {
     my $result = shift;
 
-    $CPAN::Frontend->myprint(
-        "Preparing a CPAN Testers report for $result->{dist_name}\n"
-    );
+    $CPAN::Frontend->myprint("Preparing a test report for $result->{dist_name}\n");
 
     # Get configuration options
     my $config_obj = _open_config_file();
@@ -475,9 +383,6 @@ END_BAD_DISTNAME
 
         return;
     }
-
-    # Gather 'expensive' data for the report
-    _expand_result( $result);
 
     # Setup the test report
     my $tr = Test::Reporter->new;
@@ -522,8 +427,9 @@ DUPLICATE_REPORT
     }
     
     if ( _prompt( $config, "edit_report", $tr->grade ) =~ /^y/ ) {
+        local $ENV{VISUAL} = $ENV{VISUAL};
         my $editor = $config->{editor};
-        local $ENV{VISUAL} = $editor if $editor;
+        $ENV{VISUAL} = $editor if $editor;
         $tr->edit_comments;
     }
     
@@ -545,18 +451,30 @@ DUPLICATE_REPORT
 }
 
 #--------------------------------------------------------------------------#
-# _expand_result - add expensive information like prerequisites and
-# toolchain that should only be generated if a report will actually
-# be sent
+# _expand_report
+#
+# broken out separately for testing
 #--------------------------------------------------------------------------#
 
-sub _expand_result {
+sub _expand_report {
     my $result = shift;
-    return if $result->{expanded}++; # only do this once
+
+    # Note: pretty_id is like "DAGOLDEN/CPAN-Reporter-0.40.tar.gz"
+    $result->{dist_name} = _format_distname( $result->{dist} );
+    $result->{dist_basename} = basename($result->{dist}->pretty_id);
     $result->{prereq_pm} = _prereq_report( $result->{dist} );
     $result->{env_vars} = _env_report();
     $result->{special_vars} = _special_vars_report();
     $result->{toolchain_versions} = _toolchain_report();
+    _grade_report($result);
+    $result->{success} =  $result->{grade} eq 'pass'
+                       || $result->{grade} eq 'unknown';
+    
+    # CPAN might fail to find an author object for some strange dists
+    my $author = $result->{dist}->author;
+    $result->{author} = defined $author ? $author->fullname : "Author";
+    $result->{author_id} = defined $author ? $author->id : "" ;
+
     return;
 }
 
@@ -610,7 +528,7 @@ sub _env_report {
 sub _format_distname {
     my $dist = shift;
     my $basename = basename( $dist->pretty_id );
-    $basename =~ s/(\.tar\.(?:gz|bz2)|\.tgz|\.zip)$//i;
+    $basename =~ s/(\.tar\.gz|\.tgz|\.zip)$//i;
     return $basename;
 }
 
@@ -649,23 +567,14 @@ sub _get_config_file {
 sub _get_config_options {
     my $config = shift;
     # extract and return valid options, with fallback to defaults
-    my %spec = CPAN::Reporter::Config::_config_spec();
     my %active;
-    OPTION: for my $option ( keys %spec ) {
+    for my $option ( keys %defaults ) {
         if ( exists $config->{_}{$option} ) {
-            my $val = $config->{_}{$option};
-            if  (   $spec{$option}{validate} &&
-                    ! $spec{$option}{validate}->($option, $val)
-                ) {
-                    $CPAN::Frontend->mywarn( "\nInvalid option '$val' in '$option'. Using default instead.\n\n" );
-                    $active{$option} = $spec{$option}{default};
-                    next OPTION;
-            }
-            $active{$option} = $val;
+            $active{$option} = $config->{_}{$option};
         }
         else {
-            $active{$option} = $spec{$option}{default}
-                if defined $spec{$option}{default};
+            $active{$option} = $defaults{$option}{default}
+                if defined $defaults{$option}{default};
         }
     }
     return \%active;
@@ -678,6 +587,132 @@ sub _get_config_options {
 
 sub _get_history_file {
     return File::Spec->catdir( _get_config_dir, "history.db" );
+}
+
+#--------------------------------------------------------------------------#
+# _grade_msg
+#--------------------------------------------------------------------------#
+
+sub _grade_msg {
+    my ($result) = @_;
+    my ($grade, $msg) = ($result->{grade}, $result->{grade_msg});
+    $CPAN::Frontend->myprint( "Test result is '$grade'");
+    $CPAN::Frontend->myprint(": $msg") if defined $msg && length $msg;
+    $CPAN::Frontend->myprint(".\n");
+    return;
+}
+
+#--------------------------------------------------------------------------#
+# _grade_report
+#--------------------------------------------------------------------------#
+
+sub _grade_report {
+    my $result = shift;
+    my ($grade,$is_make,$msg);
+    my $output = $result->{output};
+    
+    # Output strings taken from Test::Harness::
+    # _show_results()  -- for versions < 2.57_03 
+    # get_results()    -- for versions >= 2.57_03
+
+    # XXX don't shortcut to unknown with _has_tests here because a custom
+    # Makefile.PL or Build.PL might define tests in a non-standard way
+    
+    # check for make or Build
+    $is_make = _is_make( $result->{command} );
+    
+    # parse in reverse order for Test::Harness results
+    for my $i ( reverse 0 .. $#{$output} ) {
+        if ( $output->[$i] =~ m{^All tests successful}ms ) {
+            $grade = 'pass';
+            $msg = 'All tests successful';
+        }
+        elsif ( $output->[$i] =~ m{No support for OS|OS unsupported}ims ) {
+            $grade = 'na';
+            $msg = 'This platform is not supported';
+        }
+        elsif ( $output->[$i] =~ m{^.?No tests defined}ms ) {
+            $grade = 'unknown';
+            $msg = 'No tests provided';
+        }
+        elsif ( $output->[$i] =~ m{^FAILED--no tests were run}ms ) {
+            $grade = 'unknown';
+            $msg = 'No tests were run';
+        }
+        elsif ( $output->[$i] =~ m{^FAILED--.*--no output}ms ) {
+            $grade = 'fail';
+            $msg = 'Tests had no output';
+        }
+        elsif ( $output->[$i] =~ m{FAILED--Further testing stopped}ms ) {
+            $grade = 'fail';
+            $msg = 'Bailed out of tests';
+        }
+        elsif ( $output->[$i] =~ m{^Failed }ms ) {  # must be lowercase
+            $grade = 'fail';
+            $msg = "Distribution had failing tests";
+        }
+        else {
+            next;
+        }
+        if ( $grade eq 'unknown' && _has_tests() ) {
+            # probably a spurious message from recursive make, so ignore and
+            # continue if we can find any standard test files
+            $grade = $msg = undef;
+            next;
+        }
+        last if $grade;
+    }
+    
+    # didn't find Test::Harness output we recognized
+    if ( ! $grade ) {
+        $grade = "unknown";
+        $msg = "Couldn't determine a result";
+    }
+
+    # With test.pl and 'make test', any t/*.t might pass Test::Harness, but
+    # test.pl might still fail, or there might only be test.pl,
+    # so re-run make test on test.pl
+    
+    if ( $is_make && -f "test.pl" && $grade ne 'fail' ) {
+        if ( $output->[-1] =~ m{^makewrapper: make failed}ims ) {
+            $grade = "fail";
+            $msg = "'make test' error detected";
+        }
+        else {
+            $grade = "pass";
+            $msg = "'make test' no errors";
+        }
+    }
+
+    # Downgrade failure/unknown grade if we can determine a cause
+    # If perl version is too low => 'na'
+    # If stated prereqs missing => 'discard'
+
+    if ( $grade eq 'fail' || $grade eq 'unknown' ) {
+        # check for unsupported OS
+        if ( $output =~ m{No support for OS|OS unsupported}ims ) {
+            $grade = 'na';
+            $msg = 'This platform is not supported';
+        }
+        # check for perl version prerequisite or outright failure
+        if ( $result->{prereq_pm} =~ m{^\s+!\s+perl\s}ims ) {
+            $grade = 'na';
+            $msg = 'Perl version too low';
+        }
+        # check the prereq report for missing or failure flag '!'
+        elsif ( $result->{prereq_pm} =~ m{n/a}ims ) {
+            $grade = 'discard';
+            $msg = 'Prerequisite missing';
+        }
+        elsif ( $result->{prereq_pm} =~ m{^\s+!}ims ) {
+            $grade = 'discard';
+            $msg = 'Prerequisite version too low';
+        }
+    }
+
+    $result->{grade} = $grade;
+    $result->{grade_msg} = $msg;
+    return;
 }
 
 #--------------------------------------------------------------------------#
@@ -697,38 +732,6 @@ sub _has_tests {
         }
     }
     return 0;
-}
-
-#--------------------------------------------------------------------------#
-# _init_result -- create and return a hash of values for use in 
-# report evaluation and dispatch
-#
-# takes same argument format as grade_*()
-#--------------------------------------------------------------------------#
-
-sub _init_result {
-    my ($dist, $system_command, $output, $exit_value) = @_;
-    
-    my $result = {
-        dist => $dist,
-        command => $system_command,
-        is_make => _is_make( $system_command ),
-        output => ref $output eq 'ARRAY' ? $output : [ split /\n/, $output ],
-        exit_value => $exit_value,
-        # Note: pretty_id is like "DAGOLDEN/CPAN-Reporter-0.40.tar.gz"
-        dist_basename => basename($dist->pretty_id),
-        dist_name => _format_distname( $dist ),
-    };
-
-    # Used in messages to user
-    $result->{PL_file} = $result->{is_make} ? "Makefile.PL" : "Build.PL";
-
-    # CPAN might fail to find an author object for some strange dists
-    my $author = $dist->author;
-    $result->{author} = defined $author ? $author->fullname : "Author";
-    $result->{author_id} = defined $author ? $author->id : "" ;
-
-    return $result;
 }
 
 #--------------------------------------------------------------------------#
@@ -753,7 +756,28 @@ sub _is_duplicate {
 
 sub _is_make {
     my $command = shift;
-    return $command =~ m{^\S*make|Makefile.PL$}ims ? 1 : 0;
+    return $command =~ m{^\S*make}ims ? 1 : 0;
+}
+
+#--------------------------------------------------------------------------#
+# _is_valid_action
+#--------------------------------------------------------------------------#
+
+my @valid_actions = qw{ yes no ask/yes ask/no ask };
+
+sub _is_valid_action {
+    my $action = shift;
+    return grep { $action eq $_ } @valid_actions;
+}
+
+#--------------------------------------------------------------------------#
+# _is_valid_grade
+#--------------------------------------------------------------------------#
+
+my @valid_grades = qw{ pass fail unknown na default };
+sub _is_valid_grade {
+    my $grade = shift;
+    return grep { $grade eq $_ } @valid_grades;
 }
 
 #--------------------------------------------------------------------------#
@@ -793,6 +817,36 @@ sub _open_history_file {
         or $CPAN::Frontend->mywarn("Couldn't open CPAN::Reporter history file "
         . "'$history_filename': $!\n");
     return $history; 
+}
+
+#--------------------------------------------------------------------------#
+# _parse_option
+#--------------------------------------------------------------------------#
+
+sub _parse_option {
+    my $name = shift;
+    my $input_string = "default:no " . shift;
+    
+    # preset defaults
+    my @options;
+
+    # process space-separated terms in order
+    for my $spec ( split q{ }, $input_string ) {
+        my ($grade_list,$action);
+        
+        # get valid parts or warn
+        my @grade_actions = _validate_grade_action($spec);
+        
+        if( ! @grade_actions ) {
+            $CPAN::Frontend->mywarn( 
+                "Ignoring invalid grade:action '$spec' for '$name'\n"
+            );
+        }
+        
+        push @options, @grade_actions;
+    }
+    
+    return { @options };
 }
 
 #--------------------------------------------------------------------------#
@@ -869,19 +923,6 @@ sub _prereq_report {
 }
 
 #--------------------------------------------------------------------------#
-# _print_grade_msg -
-#--------------------------------------------------------------------------#
-
-sub _print_grade_msg {
-    my ($phase, $result) = @_;
-    my ($grade, $msg) = ($result->{grade}, $result->{grade_msg});
-    $CPAN::Frontend->myprint( "$phase result is '$grade'");
-    $CPAN::Frontend->myprint(": $msg") if defined $msg && length $msg;
-    $CPAN::Frontend->myprint(".\n");
-    return;
-}
-
-#--------------------------------------------------------------------------#
 # _prompt
 #
 # Note: always returns lowercase
@@ -889,22 +930,19 @@ sub _print_grade_msg {
 
 sub _prompt {
     my ($config, $option, $grade) = @_;
-    my %spec = CPAN::Reporter::Config::_config_spec();
 
-    my $dispatch = CPAN::Reporter::Config::_validate_grade_action_pair(
-        $option, join(q{ }, "default:no", $config->{$option} || '')
-    );
+    my $dispatch = _parse_option( $option, $config->{$option} );
     my $action = $dispatch->{$grade} || $dispatch->{default};
 
     my $prompt;
     if     ( $action =~ m{^ask/yes}i ) { 
         $prompt = CPAN::Shell::colorable_makemaker_prompt( 
-            $spec{$option}{prompt} . " (yes/no)", "yes" 
+            $defaults{$option}{prompt} . " (yes/no)", "yes" 
         );
     }
     elsif  ( $action =~ m{^ask(/no)?}i ) {
         $prompt = CPAN::Shell::colorable_makemaker_prompt( 
-            $spec{$option}{prompt} . " (yes/no)", "no" 
+            $defaults{$option}{prompt} . " (yes/no)", "no" 
         );
     }
     else { 
@@ -1046,110 +1084,6 @@ HERE
     return $special_vars;
 }
 
-#--------------------------------------------------------------------------#
-# _split_redirect
-#--------------------------------------------------------------------------#
-
-sub _split_redirect {
-    my $command = shift;
-    my ($cmd, $prefix) = ($command =~ m{\A(.+?)(\|.*)\z});
-    if (defined $cmd) {
-        return ($cmd, $prefix);
-    }
-    else { # didn't match a redirection
-        return $command
-    }
-}
-
-#--------------------------------------------------------------------------#
-# _timeout_wrapper
-#--------------------------------------------------------------------------#
-
-sub _timeout_wrapper {
-    my ($cmd, $timeout) = @_;
-    
-    my $wrapper = sprintf << 'HERE', $timeout, $cmd, $cmd;
-use strict;
-my ($pid, $exitcode);
-eval {
-    local $SIG{CHLD};
-    local $SIG{ALRM} = sub {die 'Timeout'};
-    $pid = fork;
-    die "Cannot fork: $!\n" unless defined $pid;
-    if ($pid) { #parent
-        alarm %s;
-        waitpid $pid, 0;
-        $exitcode = $?;
-    } else {    #child
-        exec '%s';
-    }
-};
-alarm 0;
-die $@ if $@ =~ /Cannot fork/;
-if ($@){
-    kill 9, $pid if $@ =~ /Timeout/;
-    waitpid $pid, 0;
-    $exitcode = $?;
-}
-print '(%s exited with ', $exitcode, ")\n";
-HERE
-    return $wrapper;
-}
-
-#--------------------------------------------------------------------------#
-# _timeout_wrapper_win32
-#--------------------------------------------------------------------------#
-
-sub _timeout_wrapper_win32 {
-    my ($cmd, $timeout) = @_;
-
-    eval "require Win32::Process;";
-    if ($@) {
-        $CPAN::Frontend->mywarn( << 'HERE' );
-CPAN::Reporter needs Win32::Process for inactivity_timeout support.
-Continuing without timeout...
-HERE
-        return;
-    }
-
-    my ($program) = split " ", $cmd;
-    if (! File::Spec->file_name_is_absolute( $program ) ) {
-        my $exe = $program . ".exe";
-        my ($path) = grep { -e File::Spec->catfile($_,$exe) }
-                     split /$Config{path_sep}/, $ENV{PATH};
-        if (! $path) {
-            $CPAN::Frontend->mywarn( << "HERE" );
-CPAN::Reporter can't locate $exe in the PATH. 
-Continuing without timeout...
-HERE
-            return;
-        }
-        $program = File::Spec->catfile($path,$exe);
-    }
-
-    my $wrapper = sprintf << 'HERE', $program, $cmd, $cmd, $timeout, $cmd;
-use strict;
-use Win32::Process qw/STILL_ACTIVE NORMAL_PRIORITY_CLASS/;
-my ($process,$exitcode);
-Win32::Process::Create(
-    $process,
-    '%s',
-    '%s',
-    0,
-    NORMAL_PRIORITY_CLASS,
-    "."
-) or die 'Could not spawn %s: ' . "$^E\n";
-$process->Wait(%s * 1000);
-$process->GetExitCode($exitcode);
-if ($exitcode == STILL_ACTIVE) {
-    $process->Kill(9);
-    $exitcode = 9;
-}
-print '(%s exited with ', $exitcode, ")\n";
-HERE
-    return $wrapper;
-}
-
 #--------------------------------------------------------------------------#-
 # _toolchain_report
 #--------------------------------------------------------------------------#
@@ -1169,8 +1103,6 @@ my @toolchain_mods= qw(
     Test::Harness
     Test::More
     version
-    YAML
-    YAML::Syck
 );
 
 sub _toolchain_report {
@@ -1196,6 +1128,52 @@ sub _toolchain_report {
 }
 
 
+#--------------------------------------------------------------------------#
+# _validate_grade_action 
+# returns grade, action, grade, action ...
+# returns empty list/undef if invalid
+#--------------------------------------------------------------------------#
+
+sub _validate_grade_action {
+    my $grade_action = shift;
+    
+    my ($grade_list,$action);
+
+    if ( $grade_action =~ m{.:.} ) {
+        # parse pair for later check
+        ($grade_list, $action) = $grade_action =~ m{\A([^:]+):(.+)\z};
+    }
+    elsif ( _is_valid_action($grade_action) ) {
+        # action by itself
+        return "default", $grade_action;
+    }
+    elsif ( _is_valid_grade($grade_action) ) {
+        # grade by itself
+        return $grade_action, "yes";
+    }
+    elsif( $grade_action =~ m{./.} ) {
+        # gradelist by itself, so setup for later check
+        $grade_list = $grade_action;
+        $action = "yes";
+    }
+    else {
+        # something weird, so fail
+        return;
+    }
+        
+    # check gradelist
+    my @grades = split "/", $grade_list;
+    
+    for my $g ( @grades ) { 
+        return if ! _is_valid_grade($g);
+    }
+    
+    # check action
+    return if ! _is_valid_action($action);
+
+    # otherwise, it all must be OK
+    return map { $_ => $action } @grades;
+}
 
 #--------------------------------------------------------------------------#
 # _version_finder
@@ -1363,8 +1341,6 @@ CPAN.pm.
 
 = GETTING STARTED
 
-== Installation
-
 The first step in using CPAN::Reporter is to install it using whatever
 version of CPAN.pm is already installed.  CPAN.pm will be upgraded as
 a dependency if necessary.
@@ -1375,45 +1351,17 @@ If CPAN.pm was upgraded, it needs to be reloaded.
 
  cpan> reload cpan
 
-== Configuration
-
 If upgrading from a very old version of CPAN.pm, users may be prompted to renew
 their configuration settings, including the 'test_report' option to enable
 CPAN::Reporter.  
 
 If not prompted automatically, users should manually initialize CPAN::Reporter
 support.  After enabling CPAN::Reporter, CPAN.pm will automatically continue
-with interactive configuration of CPAN::Reporter options.
+with interactive configuration of CPAN::Reporter options.  (Remember to 
+commit the CPAN configuration changes.)
 
  cpan> o conf init test_report
-
-Users will need to enter an email address in one of the following formats:
-
- johndoe@example.com
- John Doe <johndoe@example.com>
- "John Q. Public" <johnqpublic@example.com>
-
-Because {cpan-testers} uses a mailing list to collect test reports, it is
-helpful if the email address provided is subscribed to the list.  Otherwise,
-test reports will be held until manually reviewed and approved.  Subscribing an
-account to the cpan-testers list is as easy as sending a blank email to
-cpan-testers-subscribe@perl.org and replying to the confirmation email.
-
-Users will also be prompted to enter the name of an outbound email server.  It
-is recommended to use an email server provided by the user's ISP or company.
-Alternatively, leave this blank to attempt to send email directly to perl.org.
-
-Users that are new to CPAN::Reporter should accept the recommended values
-for other configuration options.
-
-After completing interactive configuration, be sure to commit (save) the CPAN
-configuration changes.
-
  cpan> o conf commit
-
-See [CPAN::Reporter::Config] for advanced configuration settings.
-
-== Using CPAN::Reporter
 
 Once CPAN::Reporter is enabled and configured, test or install modules with
 CPAN.pm as usual.  
@@ -1422,9 +1370,6 @@ For example, to force CPAN to repeat tests for CPAN::Reporter to see how it
 works:
 
  cpan> force test CPAN::Reporter
-
-When distribution tests fail, users will be prompted to edit the report to add
-addition information.
 
 = UNDERSTANDING TEST GRADES
 
@@ -1441,6 +1386,9 @@ testing or no test output was seen
 a result could not be determined from test output (e.g tests may have hung 
 and been interrupted)
 
+* {default} -- this is not an actual grade reported to CPAN Testers, but it
+is used in action prompt configuration options to indicate a fallback action
+
 In returning results to CPAN.pm, "pass" and "unknown" are considered successful
 attempts to "make test" or "Build test" and will not prevent installation.
 "fail" and "na" are considered to be failures and CPAN.pm will not install
@@ -1448,6 +1396,163 @@ unless forced.
 
 If prerequisites specified in {Makefile.PL} or {Build.PL} are not available,
 no report will be generated and a failure will be signaled to CPAN.pm.
+
+= CONFIG FILE OPTIONS
+
+Default options for CPAN::Reporter are read from a configuration file 
+{.cpanreporter/config.ini} in the user's home directory (Unix and OS X)
+or "My Documents" directory (Windows).
+
+The configuration file is in "ini" format, with the option name and value
+separated by an "=" sign
+
+  email_from = "John Doe" <johndoe@nowhere.org>
+  cc_author = no
+
+Interactive configuration of email address, action prompts and mail server
+options may be repeated at any time from the CPAN shell.  
+
+ cpan> o conf init test_report
+
+Interactive configuration will also include any additional, non-standard
+options that have been added manually to the configuration file.
+
+Available options are described in the following sections.
+
+== Email Address (required)
+
+CPAN::Reporter requires users to provide an email address that will be used
+in the "From" header of the email to cpan-testers@perl.org.
+
+* {email_from = <email address>} -- email address of the user sending the
+test report; it should be a valid address format, e.g.:
+
+ user@domain
+ John Doe <user@domain>
+ "John Q. Public" <user@domain>
+
+Because {cpan-testers} uses a mailing list to collect test reports, it is
+helpful if the email address provided is subscribed to the list.  Otherwise,
+test reports will be held until manually reviewed and approved.  
+
+Subscribing an account to the cpan-testers list is as easy as sending a blank
+email to cpan-testers-subscribe@perl.org and replying to the confirmation
+email.
+
+== Action Prompts
+
+Several steps in the generation of a test report are optional.  Configuration
+options control whether an action should be taken automatically or whether
+CPAN::Reporter should prompt the user for the action to take.  The action
+to take may be different for each report grade.
+
+Valid actions, and their associated meaning, are as follows:
+
+* {yes} -- automatic yes
+* {no} -- automatic no
+* {ask/no} or just {ask} -- ask each time, but default to no
+* {ask/yes} -- ask each time, but default to yes
+
+For "ask" prompts, the default will be used if return is pressed immediately at
+the prompt or if the {PERL_MM_USE_DEFAULT} environment variable is set to a
+true value.
+
+Action prompt options take one or more space-separated "grade:action" pairs,
+which are processed left to right.
+
+ edit_report = fail:ask/yes pass:no
+ 
+An action by itself is taken as a default to be used for any grade which does
+not have a grade-specific action.  A default action may also be set by using
+the word "default" in place of a grade.  
+
+ edit_report = ask/no
+ edit_report = default:ask/no
+ 
+A grade by itself is taken to have the action "yes" for that grade.
+
+ edit_report = default:no fail
+
+Multiple grades may be specified together by separating them with a slash.
+
+ edit_report = pass:no fail/na/unknown:ask/yes
+
+The action prompt options are:
+
+* {cc_author = <grade:action> ...} -- should module authors should be sent a copy of 
+the test report at their {author@cpan.org} address? (default:yes pass/na:no)
+* {edit_report = <grade:action> ...} -- edit the test report before sending? 
+(default:ask/no pass/na:no)
+* {send_report = <grade:action> ...} -- should test reports be sent at all?
+(default:ask/yes pass/na:yes)
+* {send_duplicates = <grade:action> ...} -- should duplicates of previous 
+reports be sent, regardless of {send_report}? (default:no)
+
+These options are included in the starter config file created automatically the
+first time CPAN::Reporter is configured interactively.
+
+Note that if {send_report} is set to "no", CPAN::Reporter will still go through
+the motions of preparing a report, but will discard it rather than send it.
+
+A better way to disable CPAN::Reporter temporarily is with the CPAN option
+{test_report}:
+
+ cpan> o conf test_report 0
+
+== Mail Server
+
+By default, Test::Reporter attempts to send mail directly to perl.org mail 
+servers.  This may fail if a user's computer is behind a network firewall 
+that blocks outbound email.  In this case, the following option should
+be set to the outbound mail server (i.e., SMTP server) as provided by
+the user's Internet service provider (ISP):
+
+* {smtp_server = <server list>} -- one or more alternate outbound mail servers
+if the default perl.org mail servers cannot be reached; multiple servers may be
+given, separated with a space (none by default)
+
+In at least one reported case, an ISP's outbound mail servers also refused 
+to forward mail unless the {email_from} was from the ISP-given email address. 
+
+This option is also included in the starter config file.
+
+== Additional Options
+
+These additional options are only necessary in special cases, such as for
+testing, debugging or if a default editor cannot be found.
+
+* {email_to = <email address>} -- alternate destination for reports instead of
+{cpan-testers@perl.org}; used for testing
+* {editor = <editor>} -- editor to use to edit the test report; if not set,
+Test::Reporter will use environment variables {VISUAL}, {EDITOR} or {EDIT}
+(in that order) to find an editor 
+* {debug = <boolean>} -- turns debugging on/off
+
+= FUNCTIONS
+
+CPAN::Reporter provides only two public function for use within CPAN.pm.
+They are not imported during {use}.  Ordinary users will never need them.
+
+== {configure()}
+
+ CPAN::Reporter::configure();
+
+Prompts the user to edit configuration settings stored in the CPAN::Reporter
+{config.ini} file.  It will create the configuration file if it does not exist.
+It is automatically called by CPAN.pm when initializing the 'test_report'
+option, e.g.:
+
+ cpan> o conf init test_report
+
+== {test()}
+
+ CPAN::Reporter::test( $cpan_dist, $system_command );
+
+Given a CPAN::Distribution object and a system command to run distribution
+tests (e.g. "make test"), {test()} executes the command via {system()} while
+teeing the output to a file.  Based on the output captured in the file,
+{test()} generates and sends a [Test::Reporter] report.  It returns true if
+the test grade is "pass" or "unknown" and returns false, otherwise.
 
 = PRIVACY WARNING
 
@@ -1476,8 +1581,6 @@ existing test-file that illustrates the bug or desired feature.
 
 = SEE ALSO
 
-* [CPAN::Reporter::Config] -- advanced configuration settings
-* [CPAN::Reporter::FAQ] -- hints and tips
 * [http://cpantesters.perl.org] -- project home with all reports
 * [http://cpantest.grango.org] -- documentation and wiki
 
