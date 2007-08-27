@@ -1,16 +1,9 @@
 Revision history for Perl module CPAN::Reporter
 
-0.99_03 Fri Aug 10 12:03:07 EDT 2007
+0.4801 Mon Aug 27 07:30:24 EDT 2007
 
-    *** DEVELOPMENT RELEASE FOR TESTING: Not recommended for general use ***
-
-    - Fixed broken PL tests when Module::Build is not available
-
-    - Tweaked grade result message printed to screen
-
-    - Noted in Pod that CPAN 1.91_53 is required for full support
-
-    - Reordered Changes to be chronological
+    - File::Copy::Recursive 0.34 is badly broken on Windows, causing our
+      tests to fail; added an "xcopy" workaround
 
 0.48 Tue Aug  7 16:28:42 EDT 2007
  
@@ -19,18 +12,6 @@ Revision history for Perl module CPAN::Reporter
     - More portable directory checks in test helper module
 
     - Cleaned up DOS/unix line endings in many files
-
-0.99_02 Tue Aug  7 06:54:59 EDT 2007
-
-    *** DEVELOPMENT RELEASE FOR TESTING: Not recommended for general use ***
-
-    - Author tests (e.g. pod/pod-coverage) moved to 'author_t' directory
-
-    - Module::Build subclass used for development moved to inc
-
-    - Pulled forward maintenance changes from 0.47_01
-
-    - Bumped Test::More prereq to 0.62
 
 0.47_01 Sat Aug  4 00:09:54 EDT 2007
  
@@ -41,49 +22,6 @@ Revision history for Perl module CPAN::Reporter
     
     - Changed how "Build.PL" is executed in tests to diagnose odd Cygwin
       failure; increased test diagnostics
-
-0.99_01 Tue Jul 31 22:28:25 EDT 2007
-    
-    *** DEVELOPMENT RELEASE FOR TESTING: Not recommended for general use ***
-        
-    * Major API additions and configuration changes in preparation for
-      adding Makefile/Build.PL and make/Build support into CPAN.pm 
-
-        * Deprecated test() function; test() separated into record_command()
-          and grade_test() functions to support CPAN.pm sending
-          reports from output generated indpendently from CPAN::Reporter,
-          e.g. CPAN.pm using Expect with distroprefs
-
-        * Added record_command() to wrap and tee a system() command and 
-          return results for further evaluation in grade_*() functions;
-          wrapping used to capture exit values that would otherwise be lost
-          from pipe to tee; will support CPAN inactivity timouts on both *nix
-          and Win32
-
-        * Added grade_PL() function to evaluate results of 'perl Makefile.PL'
-          or 'perl Build.PL'; recognizes 'require 5.xxxxx' and unsupported
-          OS error messages to be 'NA' as well as ordinary pass/fail outcomes
-
-        * Added grade_make() function to evaluate results of 'make' or
-          'Build'
-
-        * Added grade_test() function to evaluate results of 'make test'
-          or 'Build test' (refactored from old test() function)
-        
-        * Removed 'cc_author' and 'send_duplicates' options from normal
-          interactive configuration; defaults will be used unless set
-          manually in the configuration file
-
-    - separated documentation into separate API and Config files to
-      keep documentation simple in the primary CPAN::Reporter file
-
-    - added YAML & YAML::Syck to list of toolchain module versions
-      reported (i.e. determines if META.yml is used by CPAN.pm)
-
-    - began refactoring configuration code: moved configuration 
-      defaults and validation into Config.pm
-
-    - fixed bug in distribution-version string creation for .tar.bz2
 
 0.46 Tue Jul 17 22:05:50 EDT 2007
     
