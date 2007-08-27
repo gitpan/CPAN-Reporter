@@ -9,45 +9,68 @@ TODO list for Perl module CPAN::Reporter
 # Features, etc
 #--------------------------------------------------------------------------#
 
+# High priority
+
+- make duplicate checks specific to phase (i.e. PL, make, test)
+
+# Medium priority 
+
+- add advanced options and have them supersede "send_report" if they exist
+  (requested by Cantrell)
+    * send_PL_report
+    * send_make_report
+    * send_test_report
+
+- add T::R transport() support  if T::R is >= 1.34
+
+- refactor all config, history, etc code into separate modules
+
+- test with Test::Harness::Compatible in T::H 3.0 (aka TAPx)
+
 - set alternate configuration file via environment variable
 
-- use environment variable and/or external file to indicate modules to 
-  skip for reporting
+- Add config to save reports to a file (Jerry Hedden) (RT#24816)
 
-- ability to turn on/off via an environment variable (David Cantrell)
+- Log entire history of reporting, regardless of whether a report is sent
+  (David Cantrell) -- i.e. keep discards somehow ("DISCARD" just like rest 
+  of subject line?)
 
-- ability to only report on what I asked to install, not on its dependencies
-  (David Cantrell)
+# Low priority
 
-- Add config to save reports to a file (Jerry Hedden)
+- switch from a single flat file for history. e.g.
+    - SDBM_File for history (key on subject line, with phase as value?
+      Or key on distro name/perl with result and phase as value? ) -- but
+      does it scale well?  (See MJD's article)
+    - Or use sorted file with Search::Dict(?) -- (prefer this option,
+      keeps search for non-existant line fast; insertion is a just a few
+      block writes and a rename.) If we do this, need to put distro name
+      first to make "have_tested()" easier to write
+    - Use filesystem to index -- one file per distname? hash with directories
+      to keep number of files/directory down?
 
-- Check for system() call $? & 127 (only on Unix, though) or set a $SIG{INT}
-  handler (for Win32); abort test without sending; key question: is this
-  success or fail for return code to CPAN?  Probably the latter.  Or, prompt
-  for both parts -- so hanging tests can be reported.
+- Confirm Test::Harness diagnostics on various versions of T::H ( Note --
+  modern CPAN may be forcing 2.62 in some situations, but not all)
 
-- Add an interface for CPAN.pm to pass in test output directly (e.g. from 
-  Expect.pm) for report generation.
+- add timeout to prompt (RT#28034)
 
 - Figure out if forced tests should be handled differently than normal
   tests
 
-- In test programs, check that temp space gets created -- skip if can't 
-  set up the test properly
-
-- Add interactive config for editor
-
-- Figure out where/how to capture Makefile.PL/Build.PL and make/Build results
-
-- Figure out what Andreas is doing with locally applied patches in CPAN.pm
-
-- Confirm up-to-date Test::Harness diagnostics ( Note -- modern CPAN
-  may be forcing 2.62 in some situations, but not all)
+- Add interactive config for editor?
 
 - Look at CPANPLUS::Internals::Constants::Reports and try to 
   replicate that logic
 
 - Improve test coverage for utility subs and error handling
 
-- Check email addresses for validity (?)
+- Check email addresses for validity (cf. Email::Valid, etc.)
 
+# Probably won't implement
+
+- ability to turn on/off via an environment variable (David Cantrell)
+
+- ability to only report on what I asked to install, not on its dependencies
+  (David Cantrell)
+
+- use environment variable and/or external file to indicate modules to 
+  skip for reporting
