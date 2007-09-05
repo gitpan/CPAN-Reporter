@@ -58,10 +58,10 @@ my @test_distros = (
         mb_msg => "All tests successful",
     },
     {
-        name => 't-Recurse',
+        name => 't-Recurse-Pass',
         eumm_success => 1,
         eumm_grade => "pass",
-        eumm_msg => "All tests successful",
+        eumm_msg => "'make test' no errors",
         mb_success => 1,
         mb_grade => "pass",
         mb_msg => "All tests successful",

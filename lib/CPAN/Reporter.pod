@@ -4,11 +4,11 @@
 
 =head1 NAME
 
-CPAN::Reporter - Provides Test::Reporter support for CPAN.pm
+CPAN::Reporter - Adds CPAN Testers reporting to CPAN.pm
 
 =head1 VERSION
 
-This documentation describes version 0.99_05.
+This documentation describes version 0.99_06.
 
 =head1 SYNOPSIS
 
@@ -20,21 +20,17 @@ From the CPAN shell:
 
 =head1 DESCRIPTION
 
-CPAN::Reporter is an add-on for the CPAN.pm module that uses L<Test::Reporter>
-to send the results of module tests to the CPAN Testers project.  Partial
-support for CPAN::Reporter is available in CPAN.pm as of version 1.88; full
-support is available in CPAN.pm as of version 1.91_53.
+The CPAN Testers project captures and analyses detailed results from building
+and testing CPAN distributions on multiple operating systems and multiple
+versions of Perl.  This provides valuable feedback to module authors and
+potential users to identify bugs or platform compatibility issues and improves
+the overall quality and value of CPAN.
 
-The goal of the CPAN Testers project (L<http://testers.cpan.org/>) is to
-test as many CPAN packages as possible on as many platforms as
-possible.  This provides valuable feedback to module authors and
-potential users to identify bugs or platform compatibility issues and
-improves the overall quality and value of CPAN.
-
-One way individuals can contribute is to send test results for each module that
-they test or install.  Installing CPAN::Reporter gives the option of
-automatically generating and emailing test reports whenever tests are run via
-CPAN.pm.
+One way individuals can contribute is to send a report for each module that
+they test or install.  CPAN::Reporter is an add-on for the CPAN.pm module to
+send the results of building and testing modules to the CPAN Testers project.
+Partial support for CPAN::Reporter is available in CPAN.pm as of version 1.88;
+full support is available in CPAN.pm as of version 1.91_53.
 
 =head1 GETTING STARTED
 
@@ -175,15 +171,13 @@ existing test-file that illustrates the bug or desired feature.
 
 =head1 SEE ALSO
 
+Information about CPAN::Testers:
+
 =over
 
 =item *
 
-L<CPAN::Reporter::Config> -- advanced configuration settings
-
-=item *
-
-L<CPAN::Reporter::FAQ> -- hints and tips
+L<CPAN::Testers> -- overview of CPAN Testers architecture stack
 
 =item *
 
@@ -195,45 +189,42 @@ L<http://cpantest.grango.org> -- documentation and wiki
 
 =back
 
+Additional Documentation: 
+
+=over
+
+=item *
+
+L<CPAN::Reporter::Config> -- advanced configuration settings
+
+=item *
+
+L<CPAN::Reporter::FAQ> -- hints and tips
+
+=back
+
 =head1 AUTHOR
 
 David A. Golden (DAGOLDEN)
-
-dagolden@cpan.org
-
-http:E<sol>E<sol>www.dagolden.orgE<sol>
 
 =head1 COPYRIGHT AND LICENSE
 
 Copyright (c) 2006, 2007 by David A. Golden
 
-This program is free software; you can redistribute
-it andE<sol>or modify it under the same terms as Perl itself.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at 
+L<http://www.apache.org/licenses/LICENSE-2.0>
 
-The full text of the license can be found in the
-LICENSE file included with this module.
+Files produced as output though the use of this software, including
+generated copies of boilerplate templates provided with this software,
+shall not be considered Derivative Works, but shall be considered the
+original work of the Licensor.
 
-=head1 DISCLAIMER OF WARRANTY
-
-BECAUSE THIS SOFTWARE IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY
-FOR THE SOFTWARE, TO THE EXTENT PERMITTED BY APPLICABLE LAW. EXCEPT WHEN
-OTHERWISE STATED IN WRITING THE COPYRIGHT HOLDERS ANDE<sol>OR OTHER PARTIES
-PROVIDE THE SOFTWARE "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER
-EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. THE
-ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE SOFTWARE IS WITH
-YOU. SHOULD THE SOFTWARE PROVE DEFECTIVE, YOU ASSUME THE COST OF ALL
-NECESSARY SERVICING, REPAIR, OR CORRECTION.
-
-IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING
-WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MAY MODIFY ANDE<sol>OR
-REDISTRIBUTE THE SOFTWARE AS PERMITTED BY THE ABOVE LICENCE, BE
-LIABLE TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL,
-OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR INABILITY TO USE
-THE SOFTWARE (INCLUDING BUT NOT LIMITED TO LOSS OF DATA OR DATA BEING
-RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR THIRD PARTIES OR A
-FAILURE OF THE SOFTWARE TO OPERATE WITH ANY OTHER SOFTWARE), EVEN IF
-SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF
-SUCH DAMAGES.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 

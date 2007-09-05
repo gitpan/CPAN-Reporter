@@ -1,13 +1,15 @@
 package CPAN::Reporter;
 use strict;
 
-$CPAN::Reporter::VERSION = '0.99_05'; 
+$CPAN::Reporter::VERSION = '0.99_06'; 
 
 use Config;
 use Config::Tiny ();
 use CPAN ();
+use CPAN::Version ();
 use Fcntl qw/:flock :seek/;
 use File::Basename qw/basename/;
+use File::Find ();
 use File::HomeDir ();
 use File::Path qw/mkpath rmtree/;
 use File::Spec ();
@@ -176,7 +178,7 @@ sub grade_test {
     _compute_test_grade($result);
     if ( $result->{grade} eq 'discard' ) {
         $CPAN::Frontend->mywarn( 
-            "\nCPAN::Reporter: Test results were not valid, $result->{grade_msg}\n\n",
+            "\nCPAN::Reporter: Test results were not valid, $result->{grade_msg}.\n\n",
             $result->{prereq_pm}, "\n",
             "Test results for $result->{dist_name} will be discarded"
         );
@@ -206,13 +208,13 @@ sub record_command {
         $wrap_code = $^O eq 'MSWin32'
                    ? _timeout_wrapper_win32($cmd, $timeout)
                    : _timeout_wrapper($cmd, $timeout);
-        warn "$wrap_code\n";
     }
     # if no timeout or timeout wrap code wasn't available
     if ( ! $wrap_code ) {
         $wrap_code = << "HERE";
-system('$cmd');
-print '($cmd exited with ', \$?, ")\\n";
+my \$rc = system('$cmd');
+my \$ec = \$rc == -1 ? -1 : \$?;
+print '($cmd exited with ', \$ec, ")\\n";
 HERE
     }
 
@@ -245,6 +247,12 @@ HERE
     if ( $cmd_output[-1] =~ m{exited with} ) {
         ($exit_value) = $cmd_output[-1] =~ m{exited with ([-0-9]+)};
         delete $cmd_output[-1];
+    }
+    if ( ! defined $exit_value || $exit_value == -1 ) {
+        $CPAN::Frontend->mywarn( 
+            "CPAN::Reporter couldn't execute '$cmd'\n"
+        );
+        return;
     }
 
     return \@cmd_output, $exit_value;
@@ -313,78 +321,28 @@ sub _compute_PL_grade {
 
 #--------------------------------------------------------------------------#
 # _compute_test_grade
+#
+# Don't shortcut to unknown unless _has_tests because a custom
+# Makefile.PL or Build.PL might define tests in a non-standard way
+# 
+# With test.pl and 'make test', any t/*.t might pass Test::Harness, but
+# test.pl might still fail, or there might only be test.pl,
+# so use exit code directly
+#
+# Likewise, if we have recursive Makefile.PL, then we don't trust the
+# recursive parsing and should just take the exit code
 #--------------------------------------------------------------------------#
 
 sub _compute_test_grade {
     my $result = shift;
     my ($grade,$msg);
     my $output = $result->{output};
-    
-    # we need to know prerequisites early
+
+    # we need to find prerequisites and toolchain earlier than usual
     _expand_result( $result );
 
-    # Output strings taken from Test::Harness::
-    # _show_results()  -- for versions < 2.57_03 
-    # get_results()    -- for versions >= 2.57_03
-
-    # XXX don't shortcut to unknown with _has_tests here because a custom
-    # Makefile.PL or Build.PL might define tests in a non-standard way
-    
-    # check for make or Build
-    
-    # parse in reverse order for Test::Harness results
-    for my $i ( reverse 0 .. $#{$output} ) {
-        if ( $output->[$i] =~ m{^All tests successful}ms ) {
-            $grade = 'pass';
-            $msg = 'All tests successful';
-        }
-        elsif ( $output->[$i] =~ m{No support for OS|OS unsupported}ims ) {
-            $grade = 'na';
-            $msg = 'This platform is not supported';
-        }
-        elsif ( $output->[$i] =~ m{^.?No tests defined}ms ) {
-            $grade = 'unknown';
-            $msg = 'No tests provided';
-        }
-        elsif ( $output->[$i] =~ m{^FAILED--no tests were run}ms ) {
-            $grade = 'unknown';
-            $msg = 'No tests were run';
-        }
-        elsif ( $output->[$i] =~ m{^FAILED--.*--no output}ms ) {
-            $grade = 'fail';
-            $msg = 'Tests had no output';
-        }
-        elsif ( $output->[$i] =~ m{FAILED--Further testing stopped}ms ) {
-            $grade = 'fail';
-            $msg = 'Bailed out of tests';
-        }
-        elsif ( $output->[$i] =~ m{^Failed }ms ) {  # must be lowercase
-            $grade = 'fail';
-            $msg = "Distribution had failing tests";
-        }
-        else {
-            next;
-        }
-        if ( $grade eq 'unknown' && _has_tests() ) {
-            # probably a spurious message from recursive make, so ignore and
-            # continue if we can find any standard test files
-            $grade = $msg = undef;
-            next;
-        }
-        last if $grade;
-    }
-    
-    # didn't find Test::Harness output we recognized
-    if ( ! $grade ) {
-        $grade = "unknown";
-        $msg = "Couldn't determine a result";
-    }
-
-    # With test.pl and 'make test', any t/*.t might pass Test::Harness, but
-    # test.pl might still fail, or there might only be test.pl,
-    # so use exit code directly
-    
-    if ( $result->{is_make} && -f "test.pl" && $grade ne 'fail' ) {
+    # Get a result from the exit code
+    if ( $result->{is_make} && ( -f "test.pl" || _has_recursive_make() ) ) {
         if ( $result->{exit_value} ) {
             $grade = "fail";
             $msg = "'make test' error detected";
@@ -394,13 +352,42 @@ sub _compute_test_grade {
             $msg = "'make test' no errors";
         }
     }
+    # Otherwise, get a result from Test::Harness output
+    else {
+        # figure out the right harness parser
+        my $harness_version = $result->{toolchain}{'Test::Harness'}{have};
+        my $harness_parser = CPAN::Version->vgt($harness_version, '2.99_01')
+                    ? \&_parse_tap_harness
+                    : \&_parse_test_harness;
+        # parse lines in reverse
+        for my $i ( reverse 0 .. $#{$output} ) {
+            if ( $output->[$i] =~ m{No support for OS|OS unsupported}ims ) { # from any *.t file
+                $grade = 'na';
+                $msg = 'This platform is not supported';
+            }
+            elsif ( $output->[$i] =~ m{^.?No tests defined}ms ) { # from EU::MM
+                $grade = 'unknown';
+                $msg = 'No tests provided';
+            }
+            else {
+                ($grade, $msg) = $harness_parser->( $output->[$i] );
+            }
+            last if $grade;
+        }
+        # fallback if we didn't find Test::Harness output we recognized
+        if ( ! $grade ) {
+            $grade = "unknown";
+            $msg = "Couldn't determine a result";
+        }
+    }
 
     # Downgrade failure/unknown grade if we can determine a cause
+    # If platform not supported => 'na'
     # If perl version is too low => 'na'
     # If stated prereqs missing => 'discard'
 
     if ( $grade eq 'fail' || $grade eq 'unknown' ) {
-        # check for unsupported OS
+        # check again for unsupported OS in case we took 'fail' from exit value
         if ( $output =~ m{No support for OS|OS unsupported}ims ) {
             $grade = 'na';
             $msg = 'This platform is not supported';
@@ -556,7 +543,7 @@ sub _expand_result {
     $result->{prereq_pm} = _prereq_report( $result->{dist} );
     $result->{env_vars} = _env_report();
     $result->{special_vars} = _special_vars_report();
-    $result->{toolchain_versions} = _toolchain_report();
+    $result->{toolchain_versions} = _toolchain_report( $result );
     return;
 }
 
@@ -700,6 +687,28 @@ sub _has_tests {
 }
 
 #--------------------------------------------------------------------------#
+# _has_recursive_make
+#
+# Ignore Makefile.PL in t directories 
+#--------------------------------------------------------------------------#
+
+sub _has_recursive_make {
+    my $PL_count = 0;
+    File::Find::find(
+        sub {
+            if ( $_ eq 't' ) {
+                $File::Find::prune = 1;
+            }
+            elsif ( $_ eq 'Makefile.PL' ) {
+                $PL_count++;
+            }
+        },
+        File::Spec->curdir()
+    );
+    return $PL_count > 1;
+}
+
+#--------------------------------------------------------------------------#
 # _init_result -- create and return a hash of values for use in 
 # report evaluation and dispatch
 #
@@ -788,11 +797,80 @@ sub _open_config_file {
 sub _open_history_file {
     my $mode = shift || '<';
     my $history_filename = _get_history_file();
-    return if ( $mode eq '<' && ! -f $history_filename );
+    my $file_exists = -f $history_filename;
+
+    # shortcut if reading and doesn't exist
+    return if ( $mode eq '<' && ! $file_exists );
+
+    # open it in the desired mode
     my $history = IO::File->new( $history_filename, $mode )
         or $CPAN::Frontend->mywarn("Couldn't open CPAN::Reporter history file "
         . "'$history_filename': $!\n");
+    
+    # if writing and it didn't exist before, initialize with header
+    if ( substr($mode,0,1) eq '>' && ! $file_exists ) {
+        print {$history} "# Generated by CPAN::Reporter " .
+                         CPAN::Reporter->VERSION, "\n";
+    }
+
     return $history; 
+}
+
+#--------------------------------------------------------------------------#
+# _parse_tap_harness
+# 
+# As of Test::Harness 2.99_02, the final line is provided by TAP::Harness
+# as "Result: STATUS" where STATUS is "PASS", "FAIL" or "NOTESTS"
+#--------------------------------------------------------------------------#
+
+
+sub _parse_tap_harness {
+    my ($line) = @_;
+    if ( $line =~ m{^Result:\s+([A-Z]+)} ) {
+        if    ( $1 eq 'PASS' ) {
+            return ('pass', 'All tests successful');
+        }
+        elsif ( $1 eq 'FAIL' ) {
+            return ('fail', 'One or more tests failed');
+        }
+        elsif ( $1 eq 'NOTESTS' ) {
+            return ('unknown', 'No tests were run');
+        }
+    }
+    elsif ( $line =~ m{Bailout called\.\s+Further testing stopped}ms ) {
+        return ( 'fail', 'Bailed out of tests');
+    }
+    return;
+}
+
+#--------------------------------------------------------------------------#
+# _parse_test_harness
+#
+# Output strings taken from Test::Harness::
+# _show_results()  -- for versions < 2.57_03 
+# get_results()    -- for versions >= 2.57_03
+#--------------------------------------------------------------------------#
+
+sub _parse_test_harness {
+    my ($line) = @_;
+    if ( $line =~ m{^All tests successful}ms ) {
+        return ( 'pass', 'All tests successful' );
+    }
+    elsif ( $line =~ m{^FAILED--no tests were run}ms ) {
+        return ( 'unknown', 'No tests were run' );
+    }
+    elsif ( $line =~ m{^FAILED--.*--no output}ms ) {
+        return ( 'unknown', 'No tests were run');
+    }
+    elsif ( $line =~ m{FAILED--Further testing stopped}ms ) {
+        return ( 'fail', 'Bailed out of tests');
+    }
+    elsif ( $line =~ m{^Failed }ms ) {  # must be lowercase
+        return ( 'fail', 'One or more tests failed');
+    }
+    else {
+        return;
+    }
 }
 
 #--------------------------------------------------------------------------#
@@ -1078,18 +1156,20 @@ eval {
     die "Cannot fork: $!\n" unless defined $pid;
     if ($pid) { #parent
         alarm %s;
-        waitpid $pid, 0;
-        $exitcode = $?;
+        my $wstat = waitpid $pid, 0;
+        $exitcode = $wstat == -1 ? -1 : $?;
     } else {    #child
         exec '%s';
     }
 };
 alarm 0;
-die $@ if $@ =~ /Cannot fork/;
-if ($@){
-    kill 9, $pid if $@ =~ /Timeout/;
-    waitpid $pid, 0;
-    $exitcode = $?;
+if ($pid && $@ =~ /Timeout/){
+    kill 9, $pid;
+    my $wstat = waitpid $pid, 0;
+    $exitcode = $wstat == -1 ? -1 : $?;
+}
+elsif ($@) {
+    die $@;
 }
 print '(%s exited with ', $exitcode, ")\n";
 HERE
@@ -1174,7 +1254,10 @@ my @toolchain_mods= qw(
 );
 
 sub _toolchain_report {
+    my ($result) = @_;
+
     my $installed = _version_finder( map { $_ => 0 } @toolchain_mods );
+    $result->{toolchain} = $installed;
 
     my $mod_width = _max_length( keys %$installed );
     my $ver_width = _max_length( 
@@ -1329,7 +1412,7 @@ __END__
 
 = NAME
 
-CPAN::Reporter - Provides Test::Reporter support for CPAN.pm
+CPAN::Reporter - Adds CPAN Testers reporting to CPAN.pm
 
 = VERSION
 
@@ -1345,21 +1428,17 @@ From the CPAN shell:
 
 = DESCRIPTION
 
-CPAN::Reporter is an add-on for the CPAN.pm module that uses [Test::Reporter]
-to send the results of module tests to the CPAN Testers project.  Partial
-support for CPAN::Reporter is available in CPAN.pm as of version 1.88; full
-support is available in CPAN.pm as of version 1.91_53.
+The CPAN Testers project captures and analyses detailed results from building
+and testing CPAN distributions on multiple operating systems and multiple
+versions of Perl.  This provides valuable feedback to module authors and
+potential users to identify bugs or platform compatibility issues and improves
+the overall quality and value of CPAN.
 
-The goal of the CPAN Testers project ([http://testers.cpan.org/]) is to
-test as many CPAN packages as possible on as many platforms as
-possible.  This provides valuable feedback to module authors and
-potential users to identify bugs or platform compatibility issues and
-improves the overall quality and value of CPAN.
-
-One way individuals can contribute is to send test results for each module that
-they test or install.  Installing CPAN::Reporter gives the option of
-automatically generating and emailing test reports whenever tests are run via
-CPAN.pm.
+One way individuals can contribute is to send a report for each module that
+they test or install.  CPAN::Reporter is an add-on for the CPAN.pm module to
+send the results of building and testing modules to the CPAN Testers project.
+Partial support for CPAN::Reporter is available in CPAN.pm as of version 1.88;
+full support is available in CPAN.pm as of version 1.91_53.
 
 = GETTING STARTED
 
@@ -1476,51 +1555,40 @@ existing test-file that illustrates the bug or desired feature.
 
 = SEE ALSO
 
-* [CPAN::Reporter::Config] -- advanced configuration settings
-* [CPAN::Reporter::FAQ] -- hints and tips
+Information about CPAN::Testers:
+
+* [CPAN::Testers] -- overview of CPAN Testers architecture stack
 * [http://cpantesters.perl.org] -- project home with all reports
 * [http://cpantest.grango.org] -- documentation and wiki
+
+Additional Documentation: 
+
+* [CPAN::Reporter::Config] -- advanced configuration settings
+* [CPAN::Reporter::FAQ] -- hints and tips
 
 = AUTHOR
 
 David A. Golden (DAGOLDEN)
 
-dagolden@cpan.org
-
-http://www.dagolden.org/
-
 = COPYRIGHT AND LICENSE
 
 Copyright (c) 2006, 2007 by David A. Golden
 
-This program is free software; you can redistribute
-it and/or modify it under the same terms as Perl itself.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at 
+[http://www.apache.org/licenses/LICENSE-2.0]
 
-The full text of the license can be found in the
-LICENSE file included with this module.
+Files produced as output though the use of this software, including
+generated copies of boilerplate templates provided with this software,
+shall not be considered Derivative Works, but shall be considered the
+original work of the Licensor.
 
-= DISCLAIMER OF WARRANTY
-
-BECAUSE THIS SOFTWARE IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY
-FOR THE SOFTWARE, TO THE EXTENT PERMITTED BY APPLICABLE LAW. EXCEPT WHEN
-OTHERWISE STATED IN WRITING THE COPYRIGHT HOLDERS AND/OR OTHER PARTIES
-PROVIDE THE SOFTWARE "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER
-EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. THE
-ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE SOFTWARE IS WITH
-YOU. SHOULD THE SOFTWARE PROVE DEFECTIVE, YOU ASSUME THE COST OF ALL
-NECESSARY SERVICING, REPAIR, OR CORRECTION.
-
-IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING
-WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MAY MODIFY AND/OR
-REDISTRIBUTE THE SOFTWARE AS PERMITTED BY THE ABOVE LICENCE, BE
-LIABLE TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL,
-OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR INABILITY TO USE
-THE SOFTWARE (INCLUDING BUT NOT LIMITED TO LOSS OF DATA OR DATA BEING
-RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR THIRD PARTIES OR A
-FAILURE OF THE SOFTWARE TO OPERATE WITH ANY OTHER SOFTWARE), EVEN IF
-SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF
-SUCH DAMAGES.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 =end wikidoc
 

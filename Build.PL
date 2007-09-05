@@ -6,16 +6,17 @@ eval "require $class";
 $class->new( 
     module_name         => 'CPAN::Reporter',
     dist_author         => 'David A. Golden <dagolden@cpan.org>',
-    license             => 'perl',
+    license             => 'apache',
     create_readme       => 1,
     create_makefile_pl  => 'traditional',
     requires        => {
         # module requirements here
         'Config::Tiny'          => 2.08,
         'CPAN'                  => 1.88,
-        'ExtUtils::MakeMaker'   => 6.26, # sane ExtUtils::Command::MM
+        'ExtUtils::MakeMaker'   => 6.36, # many bug fixes
         'File::Basename'        => 0,
-        'File::Copy::Recursive' => 0.28,
+        'File::Copy::Recursive' => 0.35,
+        'File::Find'            => 0,
         'File::HomeDir'         => 0.58, 
         'File::Path'            => 0,
         'File::pushd'           => 0.32,

@@ -4,6 +4,8 @@ TODO list for Perl module CPAN::Reporter
 # Bugs
 #--------------------------------------------------------------------------#
 
+- Games-Literati-0.01 -- recursive Makefile.PL with only test.pl in a 
+  subdirectory; test.pl passes but returns unknown
 
 #--------------------------------------------------------------------------#
 # Features, etc
@@ -12,6 +14,7 @@ TODO list for Perl module CPAN::Reporter
 # High priority
 
 - make duplicate checks specific to phase (i.e. PL, make, test)
+    * upgrade old history files; add a version header for future
 
 # Medium priority 
 
@@ -25,7 +28,8 @@ TODO list for Perl module CPAN::Reporter
 
 - refactor all config, history, etc code into separate modules
 
-- test with Test::Harness::Compatible in T::H 3.0 (aka TAPx)
+- test with Test::Harness::Compatible in T::H 3.0 (aka TAPx) or whatever
+  is the final Test::Harness
 
 - set alternate configuration file via environment variable
 
@@ -34,6 +38,9 @@ TODO list for Perl module CPAN::Reporter
 - Log entire history of reporting, regardless of whether a report is sent
   (David Cantrell) -- i.e. keep discards somehow ("DISCARD" just like rest 
   of subject line?)
+
+- detect recursive Makefile.PL and adjust parsing logic; perhaps just rely
+  on the exit code of make now that we wrap all system calls to retrieve it
 
 # Low priority
 
