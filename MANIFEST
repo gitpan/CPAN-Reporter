@@ -11,6 +11,8 @@ lib/CPAN/Reporter/Config.pm
 lib/CPAN/Reporter/Config.pod
 lib/CPAN/Reporter/FAQ.pm
 lib/CPAN/Reporter/FAQ.pod
+lib/CPAN/Reporter/History.pm
+lib/CPAN/Reporter/History.pod
 LICENSE
 Makefile.PL
 MANIFEST			This list of files
@@ -39,6 +41,7 @@ t/61_bad_dist_names.t
 t/62_duplicate_reports.t
 t/70_darwin_move_config.t
 t/71_missing_config.t
+t/72_rename_history.t
 t/dist/make-Fail/Build.PL
 t/dist/make-Fail/Die.PL
 t/dist/make-Fail/lib/Bogus/Module.pm
@@ -203,6 +206,8 @@ t/dist/test.pl-PrereqPerl-OK/Makefile.PL
 t/dist/test.pl-PrereqPerl-OK/test.pl
 t/Frontend.pm
 t/Helper.pm
+t/history/history.db
+t/history/reports-sent.db
 t/MockCPANDist.pm
 t/perl5lib/Bogus/Complex.pm
 t/perl5lib/Bogus/Conflict.pm
@@ -213,6 +218,6 @@ t/perl5lib/Bogus/LT.pm
 t/perl5lib/Bogus/LTE.pm
 t/perl5lib/Bogus/NoVersion.pm
 t/perl5lib/Bogus/TooOld.pm
-t_extra/pod-coverage.t
-t_extra/pod.t
 Todo
+xt/pod-coverage.t
+xt/pod.t

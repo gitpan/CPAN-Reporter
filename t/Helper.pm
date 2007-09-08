@@ -429,14 +429,12 @@ sub test_report {
     my $prereq = CPAN::Reporter::_prereq_report( $case->{dist} );
     my $msg_re = $report_para{ $expected_grade };
 
-    my ($result, $stdout, $stderr, $err) = _run_report( $case );
+    my $pushd = pushd( _ok_clone_dist_dir( $case->{name} ) );
+                
+    my ($stdout, $stderr, $err, $test_output) = _run_report( $case );
     
     is( $err, q{}, 
         "report for $label ran without error" 
-    );
-
-    is( $result->{grade}, $expected_grade,
-        "result graded correctly"
     );
 
     ok( defined $msg_re && length $msg_re,
@@ -469,7 +467,8 @@ sub test_report {
         "toolchain versions found for $label"
     );
     
-    like( $t::Helper::sent_report, '/' . quotemeta($case->{original}) . '/ms',
+    my $joined_output = join("", @$test_output);
+    like( $t::Helper::sent_report, '/' . quotemeta($joined_output) . '/ms',
         "test output found for $label"
     );
 
@@ -482,20 +481,29 @@ sub test_report {
         "cc list correct"
     );
 
-    return $result;
+    return;
 };
 
 #--------------------------------------------------------------------------#
 # test_dispatch
+#
+# case requires
+#   label -- prefix for text output
+#   dist -- mock dist object
+#   name -- name for t/dist/name to copy
+#   command -- command to execute within copy of dist dir
+#   phase -- phase of PL/make/test to pass command results to
 #--------------------------------------------------------------------------#
 
-sub test_dispatch_plan { 3 };
+sub test_dispatch_plan { 4 };
 sub test_dispatch {
     local $Test::Builder::Level = $Test::Builder::Level + 1;
     my $case = shift;
     my %opt = @_;
 
-    my ($result, $stdout, $stderr, $err) = _run_report( $case );
+    my $pushd = pushd( _ok_clone_dist_dir( $case->{name} ) );
+                
+    my ($stdout, $stderr, $err) = _run_report( $case );
 
     is( $err, q{}, 
             "generate report for $case->{label}" 
@@ -562,25 +570,34 @@ sub _ok_clone_dist_dir {
 
 sub _run_report {
     my $case = shift;
+    my $phase = $case->{phase};
 
     # automate CPAN::Reporter prompting
     local $ENV{PERL_MM_USE_DEFAULT} = 1;
     
-    my ($result, $stdout, $stderr);
+    my ($stdout, $stderr, $output, $exit_value);
     
     $t::Helper::sent_report = undef;
     @t::Helper::cc_list = ();
 
     eval {
         capture sub {
-            $result = CPAN::Reporter::_init_result( 
+            # run any preliminaries to the command we want to record
+            if ( $phase eq 'make' || $phase eq 'test' ) {
+                system("$perl Makefile.PL");
+            }
+            if ( $phase eq 'test' ) {
+                system("$make");
+            }
+            ($output, $exit_value) = 
+                CPAN::Reporter::record_command( $case->{command} );
+            no strict 'refs';
+            &{"CPAN::Reporter::grade_$phase"}(
                 $case->{dist},
                 $case->{command},
-                $case->{output},
-                $case->{exit_value},
+                $output,
+                $exit_value,
             );
-            CPAN::Reporter::_compute_test_grade( $result ); 
-            CPAN::Reporter::_dispatch_report( $result );
         } => \$stdout, \$stderr;
     }; 
     if ( $@ ) {
@@ -588,7 +605,7 @@ sub _run_report {
         _diag_output( $stdout, $stderr );
     }
 
-    return ($result, $stdout, $stderr, $@);
+    return ($stdout, $stderr, $@, $output);
 }
 
 #--------------------------------------------------------------------------#

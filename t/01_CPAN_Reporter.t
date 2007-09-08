@@ -13,7 +13,7 @@ use t::Frontend;
 # Bailout if we're on a broken dev version of Test::Harness
 #--------------------------------------------------------------------------#
 require Test::Harness;
-if ( Test::Harness->VERSION eq "2.99_01" ) {
+if ( $Test::Harness::VERSION eq "2.99_01" ) {
     warn "Detected Test::Harness 2.99_01\n";
     BAIL_OUT("Your Test::Harness conflicts with CPAN::Reporter")
 }
@@ -29,11 +29,15 @@ my @api = qw(
     test 
 );
 
-plan tests =>  1 + @api ;
+my @modules = qw(
+    CPAN::Reporter
+    CPAN::Reporter::Config
+    CPAN::Reporter::History
+);
 
-require_ok( 'CPAN::Reporter' );
+plan tests =>  @api + @modules;
 
-for my $fcn ( @api ) {
-    can_ok( 'CPAN::Reporter', $fcn );
-}
+require_ok( $_ ) for @modules;
+
+can_ok( 'CPAN::Reporter', $_ ) for @api;
 
