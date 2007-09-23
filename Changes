@@ -1,8 +1,30 @@
 Revision history for Perl module CPAN::Reporter
 
-0.99_11 Fri Sep 21 17:02:18 EDT 2007
+0.99_12 Sun Sep 23 13:14:08 EDT 2007
 
-    *** DEVELOPMENT RELEASE FOR TESTING: Not recommended for general use ***
+    *** RELEASE CANDIDATE ***
+
+    * Bumped CPAN.pm prereq to 1.92 (full support for PL/make)
+
+    - Reordered report sections to move program output to immediately
+      after tester comments; this keeps most relevant information at the
+      top and prereqs and other context follow
+
+    - Added perl version to the report intro paragraph since otherwise it
+      doesn't appear until the "perl -V" output at the end of the report
+    
+    - Compressed UID/EUID variables to a single line in the report
+
+    - Made report language less 'test' specific, since we can also report
+      on PL or make failures
+
+    - Changed the way perl version is stringified for history file entries to 
+      workaround an old bleadperl bug; (a "better safe than sorry" fix)
+      (Reported by Andreas Koenig)
+
+    - Cleans up temp directories in testing more frequently
+
+0.99_11 Fri Sep 21 17:02:18 EDT 2007
 
     - Fallback to "make test" or "Build test" exit value when output parsing
       fails.  This supports custom testing in Makefile.PL or Build.PL
