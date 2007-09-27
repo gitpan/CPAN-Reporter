@@ -1,7 +1,7 @@
 package CPAN::Reporter;
 use strict;
 
-$CPAN::Reporter::VERSION = '0.99_12'; 
+$CPAN::Reporter::VERSION = '0.99_13'; 
 
 use Config;
 use CPAN ();
@@ -372,8 +372,19 @@ DUPLICATE_REPORT
         }
     }
 
-    # Continue report setup
+    # Set debug and transport options, if supported
     $tr->debug( $config->{debug} ) if defined $config->{debug};
+    my $transport = $config->{transport} || '';
+    if (length $transport && ( $transport !~ /\ANet::SMTP|Mail::Send\z/ )) {
+        $CPAN::Frontend->mywarn(
+            "CPAN::Reporter doesn't recognize '$config->{transport}' as a valid transport.\n" .
+            "Falling back to Net::SMTP\n"
+        );
+        $transport = 'Net::SMTP';
+    }
+    $tr->transport( $transport ) if $transport;
+
+    # prepare mail transport
     $tr->from( $config->{email_from} );
     $tr->address( $config->{email_to} ) if $config->{email_to};
     if ( $config->{smtp_server} ) {
@@ -803,8 +814,8 @@ sub _report_text {
 Dear $data->{author},
     
 This is a computer-generated report for $data->{dist_name}
-on $data->{perl_version}, created automatically by CPAN-Reporter-$CPAN::Reporter::VERSION and sent 
-to the CPAN Testers mailing list.  
+on $data->{perl_version}, created automatically by CPAN-Reporter-$CPAN::Reporter::VERSION 
+and sent to the CPAN Testers mailing list.  
 
 If you have received this email directly, it is because the person testing 
 your distribution chose to send a copy to your CPAN email address; there 
@@ -1132,7 +1143,8 @@ while ( <STDIN> ) {
     print "$mod $ok $have\n"
 }
 END
-close VERSIONFINDER;
+
+$version_finder->close;
 
 sub _version_finder {
     my %prereqs = @_;

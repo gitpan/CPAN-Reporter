@@ -1,5 +1,5 @@
 package CPAN::Reporter::Config;
-$VERSION = '0.99_12';
+$VERSION = '0.99_13';
 use strict; 
 use Config::Tiny ();
 use File::HomeDir (); 
@@ -271,6 +271,9 @@ HERE
         default => undef,
     },
     editor => {
+        default => undef,
+    },
+    transport => {
         default => undef,
     },
     debug => {
@@ -601,6 +604,9 @@ reports be sent, regardless of {send_report}? (default:no)
 {send_report} during the make phase
 * {send_test_report = <grade:action> ...} -- if defined, used in place of 
 {send_report} during the test phase
+* {transport = <transport>} -- if defined, passed to the {transport()} 
+method of [Test::Reporter].  Valid options are 'Net::SMTP' or 
+'Mail::Send'.  
 
 If these options are manually added to the configuration file, they will
 be included (and preserved) in subsequent interactive configuration.
