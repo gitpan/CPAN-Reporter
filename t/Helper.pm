@@ -277,6 +277,7 @@ sub test_grade_make {
 
             _diag_output( $stdout, $stderr )
                 unless ( $is_rc_correct && $is_grade_correct );
+
         } #SKIP
     } #for   
 }

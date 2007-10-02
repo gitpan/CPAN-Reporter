@@ -1,7 +1,7 @@
 package CPAN::Reporter::FAQ;
 # Not really a .pm file, but holds wikidoc which will be
 # turned into .pod by the Build.PL
-$VERSION = '0.99_13';
+$VERSION = '0.99_14'; ## no critic
 use strict; # make CPANTS happy
 1;
 __END__
@@ -73,7 +73,18 @@ If your email address is subscribed to the list but your test reports are still
 not showing up, your outbound email may have been silently blocked by your
 ISP.  See the question above about errors sending reports.
 
+== Why don't you support sending reports via HTTP or authenticated SMTP?
+
+CPAN::Reporter uses [Test::Reporter] as its conduit to CPAN Testers.  
+As soon as Test::Reporter provides support for alternative transport 
+methods, support for them will be added to CPAN::Reporter.
+
 = CPAN TESTERS
+
+== Where can I find out more about CPAN Testers?
+
+A good place to start is the CPAN Testers Wiki: 
+[http://cpantest.grango.org/]
 
 == Where can I find statistics about reports sent to CPAN Testers?
 
@@ -95,6 +106,7 @@ email address in the {email_from} option.
 
 = SEE ALSO
 
+* [CPAN::Testers]
 * [CPAN::Reporter]
 * [Test::Reporter]
 
