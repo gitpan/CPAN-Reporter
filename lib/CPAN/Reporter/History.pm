@@ -1,8 +1,8 @@
 package CPAN::Reporter::History;
-$VERSION = '0.99_14'; ## no critic
+$VERSION = '0.99_15'; ## no critic
 use strict; 
 use Config;
-use Fcntl qw/:flock :seek/;
+use Fcntl qw/:flock/;
 use File::HomeDir (); 
 use File::Path (qw/mkpath/);
 use File::Spec ();
@@ -206,7 +206,7 @@ sub _record_history {
     my $history = _open_history_file('>>') or return;
 
     flock( $history, LOCK_EX );
-    seek( $history, 0, SEEK_END );
+    seek( $history, 0, 2 ); # seek to end of file
     $history->print( $log_line );
     flock( $history, LOCK_UN );
     
@@ -227,11 +227,11 @@ CPAN::Reporter::History - Read or write a CPAN::Reporter history log
 
 This documentation refers to version %%VERSION%%
 
-= SYNOPSIS
-
-
 = DESCRIPTION
 
+Currently, all methods are private.  Future versions may add methods to
+allow programs outside CPAN::Reporter to query a CPAN::Reporter
+history file.
 
 = SEE ALSO
 

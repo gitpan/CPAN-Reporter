@@ -1,7 +1,7 @@
 package CPAN::Reporter;
 use strict;
 
-$CPAN::Reporter::VERSION = '0.99_14'; 
+$CPAN::Reporter::VERSION = '0.99_15'; 
 
 use Config;
 use CPAN ();
@@ -18,6 +18,8 @@ use Tee qw/tee/;
 use Test::Reporter ();
 use CPAN::Reporter::Config ();
 use CPAN::Reporter::History ();
+
+use constant MAX_OUTPUT_LENGTH => 50_000;
 
 #--------------------------------------------------------------------------#
 # public API
@@ -123,7 +125,7 @@ HERE
     my $exit_value;
     if ( $cmd_output[-1] =~ m{exited with} ) {
         ($exit_value) = $cmd_output[-1] =~ m{exited with ([-0-9]+)};
-        delete $cmd_output[-1];
+        pop @cmd_output;
     }
     if ( ! defined $exit_value || $exit_value == -1 ) {
         $CPAN::Frontend->mywarn( 
@@ -273,12 +275,14 @@ sub _compute_test_grade {
 
     if ( $grade eq 'fail' || $grade eq 'unknown' ) {
         # check again for unsupported OS in case we took 'fail' from exit value
-        if ( $output =~ m{No support for OS|OS unsupported}ims ) {
+        if ( grep { /No support for OS|OS unsupported/ims } @{$output} ) {
             $grade = 'na';
             $msg = 'This platform is not supported';
         }
         # check for perl version prerequisite or outright failure
-        if ( $result->{prereq_pm} =~ m{^\s+!\s+perl\s}ims ) {
+        if ( $result->{prereq_pm} =~ m{^\s+!\s+perl\s}ims 
+          || grep { /Perl .*? required.*?--this is only/ms } @{$output}
+        ) {
             $grade = 'na';
             $msg = 'Perl version too low';
         }
@@ -814,6 +818,11 @@ HERE
 sub _report_text {
     my $data = shift;
     my $test_log = join(q{},@{$data->{output}});
+    if ( length $test_log > MAX_OUTPUT_LENGTH ) {
+        $test_log = substr( $test_log, 0, MAX_OUTPUT_LENGTH) . "\n";
+        my $max_k = int(MAX_OUTPUT_LENGTH/1000) . "K";
+        $test_log .= "\n[Output truncated after $max_k]\n\n";
+    }
     # generate report
     my $output = << "ENDREPORT";
 Dear $data->{author},

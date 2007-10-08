@@ -1,8 +1,30 @@
 Revision history for Perl module CPAN::Reporter
 
-0.99_14 Tue Oct  2 14:49:40 EDT 2007
+0.99_15 Mon Oct  8 08:33:56 EDT 2007
 
-    *** RELEASE CANDIDATE -- hopefully the last one before 1.00 ***
+    *** RELEASE CANDIDATE -- still hopefully the last one before 1.00 ***
+
+    This release is dedicated to Slaven Rezic for boldly smoking with
+    the pre-release of Perl 5.005_05.
+
+    - Work around missing 5.005 Fcntl constants (noted by Slaven Rezic)
+
+    - Fix bug detecting perl version failure in test output
+      (found by Slaven Rezic while testing Sub::Uplevel on 5.00505)
+
+    - Fix bug detecting OS unsupported in test.pl and make
+
+    - Test output truncated at 50K to ensure reports will be accepted
+      by perl.org's MX and to avoid excessive output in general
+      (MX limitation noted by Slaven Rezic)
+
+    - Added documentation note in History.pm that all methods are 
+      currently private
+
+    - Removed API.pm and FAQ.pm from MANIFEST and tarball -- these are
+      just source files for API.pod and FAQ.pod generated with Pod::WikiDoc
+
+0.99_14 Tue Oct  2 14:49:40 EDT 2007
 
     * Bumped CPAN.pm prereq to 1.9203 -- fixes a bug where make/build
       continues even if Makefile/Build is missing, causing FAIL 
