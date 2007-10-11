@@ -4,7 +4,12 @@ TODO list for Perl module CPAN::Reporter
 # Bugs
 #--------------------------------------------------------------------------#
 
-- must check for bad perl version in tests as well as PL phase
+# Fix after 1.00
+
+- Different "Perl too low" error message from Module::Install distros
+    
+    ERROR: perl: Version 5.00505 is installed, but we need version >=
+    5.008002 at Makefile.PL line 158.
 
 #--------------------------------------------------------------------------#
 # Features, etc
@@ -45,6 +50,8 @@ TODO list for Perl module CPAN::Reporter
 - send duplicate report if using "report" (?) or "force" (?)
 
 # Low priority
+
+- change report truncation to take first 25K and last 25K (?)
 
 - figure out how to support color output from Test::Harness 3.0 -- probably
   set an environment variable to get them to pass color strings to the pipe
