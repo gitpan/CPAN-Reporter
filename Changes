@@ -1,5 +1,12 @@
 Revision history for Perl module CPAN::Reporter
 
+1.01 Sat Oct 13 03:21:40 EDT 2007
+
+    - Bug fix: no prompt for sending reports was being shown if
+      advanced send_*_report options were set.  (David Cantrell)
+
+    - Bug fix: was not detecting Module::Install's perl version warning
+
 1.00 Wed Oct 10 20:39:42 EDT 2007
 
     *** New major release -- API changes and other enhancements ***

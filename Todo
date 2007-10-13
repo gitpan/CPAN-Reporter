@@ -6,6 +6,10 @@ TODO list for Perl module CPAN::Reporter
 
 # Fix after 1.00
 
+- check prereq failure in make phase.  (and PL phase?)
+
+- more generally, apply downgrade checks across all phases
+
 - Different "Perl too low" error message from Module::Install distros
     
     ERROR: perl: Version 5.00505 is installed, but we need version >=
@@ -76,6 +80,8 @@ TODO list for Perl module CPAN::Reporter
 - Add interactive config for editor?
 
 - Improve test coverage for utility subs and error handling
+
+- Improve testing of prompts
 
 - Check email addresses for validity (cf. Email::Valid, etc.)
 
