@@ -1,7 +1,7 @@
 package CPAN::Reporter;
 use strict;
 
-$CPAN::Reporter::VERSION = '1.01'; 
+$CPAN::Reporter::VERSION = '1.02'; 
 
 use Config;
 use CPAN ();
@@ -33,9 +33,16 @@ sub grade_make {
     my @args = @_;
     my $result = _init_result( 'make', @args ); 
     _compute_make_grade($result);
-    _print_grade_msg($result->{is_make} ? $Config{make} : 'Build' , $result);
-    if( $result->{grade} ne 'pass' ) {
-        _dispatch_report( $result );
+    if ( $result->{grade} eq 'discard' ) {
+        $CPAN::Frontend->mywarn( 
+            "\nCPAN::Reporter: Test results were not valid, $result->{grade_msg}.\n\n",
+            $result->{prereq_pm}, "\n",
+            "Test results for $result->{dist_name} will be discarded"
+        );
+    }
+    else {
+        _print_grade_msg($result->{make_cmd}, $result);
+        if ( $result->{grade} ne 'pass' ) { _dispatch_report( $result ) }
     }
     return $result->{success};
 }
@@ -97,10 +104,11 @@ sub record_command {
     }
     # if no timeout or timeout wrap code wasn't available
     if ( ! $wrap_code ) {
+        my $safecmd = quotemeta($cmd);
         $wrap_code = << "HERE";
-my \$rc = system('$cmd');
+my \$rc = system("$safecmd");
 my \$ec = \$rc == -1 ? -1 : \$?;
-print '($cmd exited with ', \$ec, ")\\n";
+print "($safecmd exited with \$ec)\\n";
 HERE
     }
 
@@ -175,6 +183,9 @@ sub _compute_make_grade {
         $result->{grade} = "pass";
         $result->{grade_msg} = "No errors"
     }
+
+    _downgrade_known_causes( $result );
+    
     $result->{success} =  $result->{grade} eq 'pass'
                        || $result->{grade} eq 'unknown';
     return;
@@ -543,26 +554,6 @@ sub _format_distname {
     return $basename;
 }
 
-
-#--------------------------------------------------------------------------#
-# _has_tests
-#--------------------------------------------------------------------------#
-
-sub _has_tests {
-    return 1 if -f 'test.pl';
-    if ( -d 't' ) {
-        local *TESTDIR;
-        opendir TESTDIR, 't';
-        while ( my $f = readdir TESTDIR ) {
-            if ( $f =~ m{\.t$} ) {
-                close TESTDIR;
-                return 1;
-            }
-        }
-    }
-    return 0;
-}
-
 #--------------------------------------------------------------------------#
 # _has_recursive_make
 #
@@ -609,6 +600,7 @@ sub _init_result {
 
     # Used in messages to user
     $result->{PL_file} = $result->{is_make} ? "Makefile.PL" : "Build.PL";
+    $result->{make_cmd} = $result->{is_make} ? $Config{make} : "Build";
 
     # CPAN might fail to find an author object for some strange dists
     my $author = $dist->author;
@@ -962,6 +954,9 @@ sub _split_redirect {
 sub _timeout_wrapper {
     my ($cmd, $timeout) = @_;
     
+    # protect shell quotes
+    $cmd = quotemeta($cmd);
+
     my $wrapper = sprintf << 'HERE', $timeout, $cmd, $cmd;
 use strict;
 my ($pid, $exitcode);
@@ -975,7 +970,7 @@ eval {
         my $wstat = waitpid $pid, 0;
         $exitcode = $wstat == -1 ? -1 : $?;
     } else {    #child
-        exec '%s';
+        exec "%s";
     }
 };
 alarm 0;
@@ -987,7 +982,7 @@ if ($pid && $@ =~ /Timeout/){
 elsif ($@) {
     die $@;
 }
-print '(%s exited with ', $exitcode, ")\n";
+print "(%s exited with $exitcode)\n";
 HERE
     return $wrapper;
 }
@@ -1023,25 +1018,28 @@ HERE
         $program = File::Spec->catfile($path,$exe);
     }
 
+    # protect shell quotes and other things
+    $_ = quotemeta($_) for ($program, $cmd);
+
     my $wrapper = sprintf << 'HERE', $program, $cmd, $cmd, $timeout, $cmd;
 use strict;
 use Win32::Process qw/STILL_ACTIVE NORMAL_PRIORITY_CLASS/;
 my ($process,$exitcode);
 Win32::Process::Create(
     $process,
-    '%s',
-    '%s',
+    "%s",
+    "%s",
     0,
     NORMAL_PRIORITY_CLASS,
     "."
-) or die 'Could not spawn %s: ' . "$^E\n";
+) or die "Could not spawn %s: $^E\n";
 $process->Wait(%s * 1000);
 $process->GetExitCode($exitcode);
 if ($exitcode == STILL_ACTIVE) {
     $process->Kill(9);
     $exitcode = 9;
 }
-print '(%s exited with ', $exitcode, ")\n";
+print "(%s exited with $exitcode)\n";
 HERE
     return $wrapper;
 }

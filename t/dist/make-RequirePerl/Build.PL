@@ -6,7 +6,7 @@ my $class = Module::Build->subclass(
     code => <<'SUBCLASS' );
 
 sub ACTION_build {
-    eval "require File::Spec 9999.99" or die $@;
+    eval "require 5.999999" or die $@;
 }
 SUBCLASS
 
@@ -14,5 +14,5 @@ $class->new(
     module_name         => 'Bogus::Module',
     dist_author         => 'David A. Golden <dagolden@cpan.org>',
     PL_files            => { 'Die.PL' => 'impossible_file.pm' },
-    requires            => { 'File::Spec' => 9999.99 },
+    requires            => { 'perl' => 5.999999 },
 )->create_build_script;
