@@ -157,7 +157,7 @@ sub test_grade_PL {
             my ($found_grade_result, $found_msg) = 
                 ( $stdout =~ /^CPAN::Reporter: ([^,]+), ([^\n]+)/ms );
             if ( $case_grade eq 'discard' ) {
-                is ($found_grade_result, "Test results were not valid",
+                is ($found_grade_result, "test results were not valid",
                     "$case->{name}: '$tool_label' prerequisites not satisifed"
                 );
                     
@@ -176,7 +176,7 @@ sub test_grade_PL {
                     "$case->{name}: '$tool_label' grade reported as '$case_grade'"
                 ) or _diag_output( $stdout, $stderr );
                 
-                my $ctr_regex = "/Preparing a CPAN Testers report for \Q$short_name\E/";
+                my $ctr_regex = "/preparing a CPAN Testers report for \Q$short_name\E/";
                 
                 if ( $case_grade eq 'pass' ) {
                     unlike( $stdout, $ctr_regex ,
@@ -280,7 +280,7 @@ sub test_grade_make {
             my ($found_grade_result, $found_msg) = 
                 ( $stdout =~ /^CPAN::Reporter: ([^,]+), ([^\n]+)/ms );
             if ( $case_grade eq 'discard' ) {
-                is ($found_grade_result, "Test results were not valid",
+                is ($found_grade_result, "test results were not valid",
                     "$case->{name}: '$tool_label' prerequisites not satisifed"
                 );
                     
@@ -299,7 +299,7 @@ sub test_grade_make {
                     "$case->{name}: '$tool_label' grade reported as '$case_grade'"
                 ) or _diag_output( $stdout, $stderr );
                 
-                my $ctr_regex = "/Preparing a CPAN Testers report for \Q$short_name\E/";
+                my $ctr_regex = "/preparing a CPAN Testers report for \Q$short_name\E/";
                 
                 if ( $case_grade eq 'pass' ) {
                     unlike( $stdout, $ctr_regex ,
@@ -397,7 +397,7 @@ sub test_grade_test {
             my ($found_grade_result, $found_msg) = 
                 ( $stdout =~ /^CPAN::Reporter: ([^,]+), ([^\n]+)/ms );
             if ( $case->{"$tool\_grade"} eq 'discard' ) {
-                is ($found_grade_result, "Test results were not valid",
+                is ($found_grade_result, "test results were not valid",
                     "$case->{name}: '$tool_label' prerequisites not satisifed"
                 );
                     
@@ -417,7 +417,7 @@ sub test_grade_test {
                     "$case->{name}: '$tool_label' grade reported as '$case_grade'"
                 ) or _diag_output( $stdout, $stderr );
                 
-                like( $stdout, "/Preparing a CPAN Testers report for \Q$short_name\E/",
+                like( $stdout, "/preparing a CPAN Testers report for \Q$short_name\E/",
                     "$case->{name}: report notification correct"
                 );
 
@@ -593,7 +593,7 @@ sub test_report {
         "$label cc list correct"
     );
 
-    return;
+    return ($stdout, $stderr, $err, $test_output);
 };
 
 #--------------------------------------------------------------------------#
@@ -625,7 +625,7 @@ sub test_dispatch {
         ok( defined $t::Helper::sent_report && length $t::Helper::sent_report,
             "report was sent for $case->{label}"
         );
-        like( $stdout, "/Sending test report with/",
+        like( $stdout, "/sending test report with/",
             "saw report sent message for $case->{label}"
         );
     }

@@ -1,7 +1,7 @@
 package CPAN::Reporter;
 use strict;
 
-$CPAN::Reporter::VERSION = '1.04'; 
+$CPAN::Reporter::VERSION = '1.05'; 
 
 use Config;
 use CPAN ();
@@ -11,7 +11,7 @@ use File::Find ();
 use File::HomeDir ();
 use File::Path qw/mkpath rmtree/;
 use File::Spec ();
-use File::Temp ();
+use File::Temp 0.16 ();
 use IO::File ();
 use Probe::Perl ();
 use Tee qw/tee/;
@@ -36,7 +36,7 @@ sub grade_make {
     _compute_make_grade($result);
     if ( $result->{grade} eq 'discard' ) {
         $CPAN::Frontend->mywarn( 
-            "\nCPAN::Reporter: Test results were not valid, $result->{grade_msg}.\n\n",
+            "\nCPAN::Reporter: test results were not valid, $result->{grade_msg}.\n\n",
             $result->{prereq_pm}, "\n",
             "Test results for $result->{dist_name} will be discarded"
         );
@@ -54,7 +54,7 @@ sub grade_PL {
     _compute_PL_grade($result);
     if ( $result->{grade} eq 'discard' ) {
         $CPAN::Frontend->mywarn( 
-            "\nCPAN::Reporter: Test results were not valid, $result->{grade_msg}.\n\n",
+            "\nCPAN::Reporter: test results were not valid, $result->{grade_msg}.\n\n",
             $result->{prereq_pm}, "\n",
             "Test results for $result->{dist_name} will be discarded"
         );
@@ -72,7 +72,7 @@ sub grade_test {
     _compute_test_grade($result);
     if ( $result->{grade} eq 'discard' ) {
         $CPAN::Frontend->mywarn( 
-            "\nCPAN::Reporter: Test results were not valid, $result->{grade_msg}.\n\n",
+            "\nCPAN::Reporter: test results were not valid, $result->{grade_msg}.\n\n",
             $result->{prereq_pm}, "\n",
             "Test results for $result->{dist_name} will be discarded"
         );
@@ -90,13 +90,13 @@ sub record_command {
     my ($cmd, $redirect) = _split_redirect($command);
 
     my $temp_out = File::Temp->new( 
-        TEMPLATE => 'CR-TO-XXXXXXXX', DIR => File::Spec->tmpdir()
+        TEMPLATE => 'CPAN-Reporter-TO-XXXXXXXX', DIR => File::Spec->tmpdir()
     ) or die "Could not create a temporary file for output: $!";
 
     # Teeing a command loses its exit value so we must wrap the command 
     # and print the exit code so we can read it off of output
     my $cmdwrapper = File::Temp->new( 
-        TEMPLATE => 'CR-CW-XXXXXXXX', DIR => File::Spec->tmpdir() 
+        TEMPLATE => 'CPAN-Reporter-CW-XXXXXXXX', DIR => File::Spec->tmpdir() 
     ) or die "Could not create a wrapper for $cmd\: $!";
 
     my $wrap_code;
@@ -127,14 +127,14 @@ HERE
     my $temp_out2 = IO::File->new($temp_out->filename, "<");
     if ( !$temp_out2 ) {
         $CPAN::Frontend->mywarn( 
-            "CPAN::Reporter couldn't read command results for '$cmd'\n" 
+            "CPAN::Reporter: couldn't read command results for '$cmd'\n" 
         );
         return;
     }
     my @cmd_output = <$temp_out2>;
     if ( ! @cmd_output ) {
         $CPAN::Frontend->mywarn( 
-            "CPAN::Reporter didn't capture command results for '$cmd'\n"
+            "CPAN::Reporter: didn't capture command results for '$cmd'\n"
         );
         return;
     }
@@ -147,7 +147,7 @@ HERE
     }
     if ( ! defined $exit_value || $exit_value == -1 ) {
         $CPAN::Frontend->mywarn( 
-            "CPAN::Reporter couldn't execute '$cmd'\n"
+            "CPAN::Reporter: couldn't execute '$cmd'\n"
         );
         return;
     }
@@ -160,7 +160,7 @@ sub test {
     my ($output, $exit_value) = record_command( $system_command );
     unless ( defined $output && defined $exit_value ) {
         $CPAN::Frontend->mywarn(
-            "CPAN::Reporter had errors capturing output. Tests abandoned"
+            "CPAN::Reporter: had errors capturing output. Tests abandoned"
         );
         return;
     }
@@ -305,7 +305,7 @@ sub _dispatch_report {
     my $phase = $result->{phase};
 
     $CPAN::Frontend->myprint(
-        "Preparing a CPAN Testers report for $result->{dist_name}\n"
+        "CPAN::Reporter: preparing a CPAN Testers report for $result->{dist_name}\n"
     );
 
     # Get configuration options
@@ -316,8 +316,8 @@ sub _dispatch_report {
     if ( ! $config->{email_from} ) {
         $CPAN::Frontend->mywarn( << "EMAIL_REQUIRED");
         
-CPAN::Reporter requires an email-address in the config file.  
-Test report will not be sent. See documentation for configuration details.
+CPAN::Reporter: required 'email_from' option missing an email address, so
+test report will not be sent. See documentation for configuration details.
 
 EMAIL_REQUIRED
         return;
@@ -333,9 +333,9 @@ EMAIL_REQUIRED
     if ( ! grep { length } @format_checks ) {
         $CPAN::Frontend->mywarn( << "END_BAD_DISTNAME");
         
-The distribution name '$result->{dist_basename}' does not appear to be 
-formatted according to CPAN tester guidelines. Perhaps it is not a normal
-CPAN distribution.
+CPAN::Reporter: the distribution name '$result->{dist_basename}' does not 
+appear to be packaged according to CPAN tester guidelines. Perhaps it is 
+not a normal CPAN distribution.
 
 Test report will not be sent.
 
@@ -358,7 +358,7 @@ END_BAD_DISTNAME
         if ( _prompt( $config, "send_duplicates", $tr->grade) =~ /^n/ ) {
             $CPAN::Frontend->mywarn(<< "DUPLICATE_REPORT");
 
-It seems that "@{[$tr->subject]}"
+CPAN::Reporter: it seems that "@{[$tr->subject]}"
 during the $phase phase is a duplicate of a previous report you 
 sent to CPAN Testers.
 
@@ -375,8 +375,8 @@ DUPLICATE_REPORT
     my $transport = $config->{transport} || 'Net::SMTP';
     if (length $transport && ( $transport !~ /\ANet::SMTP|Mail::Send\z/ )) {
         $CPAN::Frontend->mywarn(
-            "CPAN::Reporter doesn't recognize '$config->{transport}' as a valid transport.\n" .
-            "Falling back to Net::SMTP\n"
+            "CPAN::Reporter: '$config->{transport}' is not a valid transport option." .
+            " Falling back to Net::SMTP\n"
         );
         $transport = 'Net::SMTP';
     }
@@ -396,11 +396,17 @@ DUPLICATE_REPORT
     my @cc;
 
     # User prompts for action
-    if ( _prompt( $config, "cc_author", $tr->grade) =~ /^y/ ) {
-        # CC only if we have an author_id
-        push @cc, "$result->{author_id}\@cpan.org" if $result->{author_id};
+    my $author_email = $result->{author_id} 
+                     ? "$result->{author_id}\@cpan.org"
+                     : q{};
+    if ( ! $author_email ) {
+        $CPAN::Frontend->mywarn( "CPAN::Reporter: couldn't determine author_id and won't cc author.\n");
+    }
+    if ( $author_email && _prompt( $config, "cc_author", $tr->grade, "($author_email)?") =~ /^y/ ) {
+        push @cc, $author_email;
     }
     
+    # prompt for editing report
     if ( _prompt( $config, "edit_report", $tr->grade ) =~ /^y/ ) {
         my $editor = $config->{editor};
         local $ENV{VISUAL} = $editor if $editor; ## no critic
@@ -412,18 +418,18 @@ DUPLICATE_REPORT
                     ? "send_$phase\_report"
                     : "send_report" ;
     if ( _prompt( $config, $send_config, $tr->grade ) =~ /^y/ ) {
-        $CPAN::Frontend->myprint( "Sending test report with '" . $tr->grade . 
+        $CPAN::Frontend->myprint( "CPAN::Reporter: sending test report with '" . $tr->grade . 
               "' to " . join(q{, }, $tr->address, @cc) . "\n");
         if ( $tr->send( @cc ) ) {
             CPAN::Reporter::History::_record_history( $result ) 
                 if not $is_duplicate;
         }
         else {
-            $CPAN::Frontend->mywarn( $tr->errstr. "\n");
+            $CPAN::Frontend->mywarn( "CPAN::Reporter: $tr->errstr\n");
         }
     }
     else {
-        $CPAN::Frontend->myprint("Test report will not be sent\n");
+        $CPAN::Frontend->myprint("CPAN::Reporter: test report will not be sent\n");
     }
 
     return;
@@ -448,11 +454,16 @@ sub _downgrade_known_causes {
     # get prereqs
     _expand_result( $result ); 
 
-    # look for perl version error messages
+    # look for perl version error messages from various programs
+    # "Error evaling..." type errors happen on Perl < 5.006 when modules
+    # define their version with "our $VERSION = ..."
     my $version_error;
     for my $line ( @$output ) {
         if( $line =~ /Perl .*? required.*?--this is only/ims ||
-            $line =~ /ERROR: perl: Version .*? is installed, but we need version/ims 
+            $line =~ /ERROR: perl: Version .*? is installed, but we need version/ims ||
+            $line =~ /ERROR: perl \(.*?\) is installed, but we need version/ims ||
+            $line =~ /Error evaling version line .*? package Module::Build::ModuleInfo::_version/ims ||
+            $line =~ /Could not eval .*? package ExtUtils::MakeMaker::_version/ims
         ) {
             $version_error++;
             last;
@@ -786,24 +797,22 @@ sub _print_grade_msg {
 #--------------------------------------------------------------------------#
 
 sub _prompt {
-    my ($config, $option, $grade) = @_;
+    my ($config, $option, $grade, $extra) = @_;
+    $extra ||= q{};
+
     my %spec = CPAN::Reporter::Config::_config_spec();
 
     my $dispatch = CPAN::Reporter::Config::_validate_grade_action_pair(
         $option, join(q{ }, "default:no", $config->{$option} || '')
     );
     my $action = $dispatch->{$grade} || $dispatch->{default};
-
+    my $intro = $spec{$option}{prompt} . $extra . " (yes/no)";
     my $prompt;
     if     ( $action =~ m{^ask/yes}i ) { 
-        $prompt = CPAN::Shell::colorable_makemaker_prompt( 
-            $spec{$option}{prompt} . " (yes/no)", "yes" 
-        );
+        $prompt = CPAN::Shell::colorable_makemaker_prompt( $intro, "yes" );
     }
     elsif  ( $action =~ m{^ask(/no)?}i ) {
-        $prompt = CPAN::Shell::colorable_makemaker_prompt( 
-            $spec{$option}{prompt} . " (yes/no)", "no" 
-        );
+        $prompt = CPAN::Shell::colorable_makemaker_prompt( $intro, "no" );
     }
     else { 
         $prompt = $action;
@@ -1000,7 +1009,7 @@ sub _timeout_wrapper_win32 {
     eval "use Win32::Process 0.10 ();";
     if ($@) {
         $CPAN::Frontend->mywarn( << 'HERE' );
-CPAN::Reporter needs Win32::Process 0.10 for inactivity_timeout support.
+CPAN::Reporter: you need Win32::Process 0.10 for inactivity_timeout support.
 Continuing without timeout...
 HERE
         return;
@@ -1013,7 +1022,7 @@ HERE
                      split /$Config{path_sep}/, $ENV{PATH};
         if (! $path) {
             $CPAN::Frontend->mywarn( << "HERE" );
-CPAN::Reporter can't locate $exe in the PATH. 
+CPAN::Reporter: can't locate $exe in the PATH. 
 Continuing without timeout...
 HERE
             return;
@@ -1121,7 +1130,7 @@ sub _version_finder {
     my @prereq_results;
     
     my $prereq_input = File::Temp->new( 
-        TEMPLATE => 'CR-PI-XXXXXXXX', DIR => File::Spec->tmpdir() 
+        TEMPLATE => 'CPAN-Reporter-PI-XXXXXXXX', DIR => File::Spec->tmpdir() 
     ) or die "Could not create temporary input for prereq analysis: $!";
     $prereq_input->print( map { "$_ $prereqs{$_}\n" } keys %prereqs );
     $prereq_input->close;

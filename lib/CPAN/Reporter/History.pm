@@ -1,12 +1,12 @@
 package CPAN::Reporter::History;
-$VERSION = '1.04'; ## no critic
+$VERSION = '1.05'; ## no critic
 use strict; 
 use Config;
 use Fcntl qw/:flock/;
 use File::HomeDir (); 
 use File::Path (qw/mkpath/);
 use File::Spec ();
-use File::Temp ();
+use File::Temp 0.16 ();
 use IO::File ();
 use CPAN (); # for printing warnings
 use CPAN::Reporter::Config ();
@@ -41,16 +41,16 @@ BEGIN {
     my $new_history_file = _get_history_file();
     last if -f $new_history_file || ! -f $old_history_file;
 
-    $CPAN::Frontend->mywarn("Your CPAN::Reporter history file is in an old format. Upgrading automatically.\n");
+    $CPAN::Frontend->mywarn("CPAN::Reporter: Your history file is in an old format. Upgrading automatically.\n");
 
     # open old and new files
     my ($old_fh, $new_fh);
     if (! ( $old_fh = IO::File->new( $old_history_file ) ) ) {
-        $CPAN::Frontend->mywarn("Error opening old history file: $!\nContinuing without conversion.\n");
+        $CPAN::Frontend->mywarn("CPAN::Reporter: error opening old history file: $!\nContinuing without conversion.\n");
         last;
     }
     if (! ($new_fh = IO::File->new( $new_history_file, "w" ) ) ) {
-        $CPAN::Frontend->mywarn("Error opening new history file: $!\nContinuing without conversion.\n");
+        $CPAN::Frontend->mywarn("CPAN::Reporter: error opening new history file: $!\nContinuing without conversion.\n");
         last;
     }
 
@@ -166,7 +166,7 @@ sub _open_history_file {
 
     # open it in the desired mode
     my $history = IO::File->new( $history_filename, $mode )
-        or $CPAN::Frontend->mywarn("Couldn't open CPAN::Reporter history file "
+        or $CPAN::Frontend->mywarn("CPAN::Reporter: couldn't open history file "
         . "'$history_filename': $!\n");
     
     # if writing and it didn't exist before, initialize with header
@@ -201,8 +201,8 @@ sub _perl_version {
 #--------------------------------------------------------------------------#
 
 sub _record_history {
-    my ($result, $subject) = @_;
-    my $log_line = _format_history( $result, $subject );
+    my ($result) = @_;
+    my $log_line = _format_history( $result );
     my $history = _open_history_file('>>') or return;
 
     flock( $history, LOCK_EX );

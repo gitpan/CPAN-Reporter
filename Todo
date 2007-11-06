@@ -4,23 +4,19 @@ TODO list for Perl module CPAN::Reporter
 # Bugs
 #--------------------------------------------------------------------------#
 
-- Check if CPAN::Reporter is reporting under a "force X" command?  It
-  probably shouldn't.  Is that a CPAN.pm change?  Or can I get it from 
-  the dist object? ie. $dist->{force_update} (DAGOLDEN)
-
 #--------------------------------------------------------------------------#
 # Features, etc
 #--------------------------------------------------------------------------#
 
 # High priority
 
-- Test with new File::Spec 3.25_01
-
 # Medium priority 
 
-- Add templates to all temp files for easier manual cleanup
+- For failure in PL stage -- show configure_requires and an error message
+  that other requirements aren't available if PL fails
 
-- set alternate configuration file/dir via environment variable
+- set alternate configuration file/dir via environment variable (RT#30314)
+  e.g. PERL_CPAN_REPORTER_CONFIG 
 
 - Add config to save reports to a file (Jerry Hedden) (RT#24816)
 
@@ -39,14 +35,11 @@ TODO list for Perl module CPAN::Reporter
    If some qualifying parameter is missing, this could be taken as ANY. I
    think this provides about everything I would ever need." -- Andreas
 
-- prefix all messages with "CPAN::Reporter: " -- possibly write my own
-  front-end to CPAN's front-end functions
-
-- heuristics for missing library files --> discard report
-
 - add test_timeout to CPAN.pm
 
 # Low priority
+
+- add CC recipients to output message "sending test report... to..."
 
 - change report truncation to take first 25K and last 25K (summary) (?)
 
@@ -71,13 +64,18 @@ TODO list for Perl module CPAN::Reporter
 
 - Improve test coverage for utility subs and error handling
 
-- Improve testing of prompts
-
 - Check email addresses for validity (cf. Email::Valid, etc.)
 
 - Other Config items like make or cc
 
+- heuristics for missing library files --> discard report
+
 # Probably won't implement
+
+- Check if CPAN::Reporter is reporting under a "force X" command?  It
+  probably shouldn't.  Is that a CPAN.pm change?  Or can I get it from 
+  the dist object? ie. $dist->{force_update} (DAGOLDEN)  -- on reflection,
+  as long as we're checking prereqs and discarding, this may be OK
 
 - send duplicate report if using "report" (?) or "force" (?)
 
