@@ -1,7 +1,7 @@
 package CPAN::Reporter;
 use strict;
 
-$CPAN::Reporter::VERSION = '1.05'; 
+$CPAN::Reporter::VERSION = '1.06'; 
 
 use Config;
 use CPAN ();
@@ -425,7 +425,7 @@ DUPLICATE_REPORT
                 if not $is_duplicate;
         }
         else {
-            $CPAN::Frontend->mywarn( "CPAN::Reporter: $tr->errstr\n");
+            $CPAN::Frontend->mywarn( "CPAN::Reporter: " . $tr->errstr . "\n");
         }
     }
     else {
@@ -462,8 +462,8 @@ sub _downgrade_known_causes {
         if( $line =~ /Perl .*? required.*?--this is only/ims ||
             $line =~ /ERROR: perl: Version .*? is installed, but we need version/ims ||
             $line =~ /ERROR: perl \(.*?\) is installed, but we need version/ims ||
-            $line =~ /Error evaling version line .*? package Module::Build::ModuleInfo::_version/ims ||
-            $line =~ /Could not eval .*? package ExtUtils::MakeMaker::_version/ims
+            $line =~ /Error evaling version line 'BEGIN/ims ||
+            $line =~ /Could not eval '/ims
         ) {
             $version_error++;
             last;
@@ -833,8 +833,10 @@ HERE
     'fail' => <<'HERE',
 Thank you for uploading your work to CPAN.  However, it appears that
 there were some problems with your distribution.  If these results are 
-not what you expect, please consult "Notes for CPAN Authors" on 
-the CPAN Testers Wiki: http://cpantest.grango.org
+not what you expect or if you would like to learn how to avoid FAIL 
+reports for missing dependencies, unsupported operating systems, etc.,
+please consult "Notes for CPAN Authors" on the CPAN Testers Wiki: 
+http://cpantest.grango.org
 HERE
 
     'unknown' => <<'HERE',

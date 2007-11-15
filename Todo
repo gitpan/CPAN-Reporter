@@ -12,6 +12,14 @@ TODO list for Perl module CPAN::Reporter
 
 # Medium priority 
 
+- refactor t/Helper.pm
+
+- add earlier, successful phases to output in reverse order.  Probably have to
+  bump up the test-length cutoff, though, to deal with lengthy make output
+    - Test phase output
+    - make phase output
+    - PL phase output
+
 - For failure in PL stage -- show configure_requires and an error message
   that other requirements aren't available if PL fails
 
@@ -38,6 +46,24 @@ TODO list for Perl module CPAN::Reporter
 - add test_timeout to CPAN.pm
 
 # Low priority
+
+- add link to Wiki for UNKNOWN (and NA) reports
+
+- add warnings::compat to toolchain or else add config to allow local
+  modules to be added to toolchain report
+    - SAPER: 
+        Hmm... ok. The fact is that warnings::compat isn't listed in
+        Sys::Syslog prereqs, but it should in order to make it work under
+        5.5. So I guess that Slaven manually installed it in his 5.5.5 smoker
+        in order to ease the process, but in that case, it becomes (in a
+        sense) part of the toolchain, because it masks a potentially missing
+        prereq (this is what happened here). warnings::compat is a little
+        special because it provides a way to make a core module available on
+        old Perls. So maybe CPAN::Reporter should allow one to add locally
+        installed modules in the toolchain section.
+    - SREZIC:
+        To add my 0.02EUR: maybe warnings::compat could/should be shown only
+        if 5.5.x is used.
 
 - add CC recipients to output message "sending test report... to..."
 
