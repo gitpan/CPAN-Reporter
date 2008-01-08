@@ -1,7 +1,7 @@
 package CPAN::Reporter::PrereqCheck;
 use strict;
 use vars qw/$VERSION/;
-$VERSION = '1.0601'; 
+$VERSION = '1.0602'; 
 
 use ExtUtils::MakeMaker;
 use CPAN::Version;
@@ -11,7 +11,7 @@ _run() if ! caller();
 sub _run {
     my %saw_mod;
     # read module and prereq string from STDIN
-    while ( <STDIN> ) {
+    while ( <> ) {
         m/^(\S+)\s+([^\n]*)/;
         my ($mod, $need) = ($1, $2);
         die "Couldn't read module for '$_'" unless $mod;
