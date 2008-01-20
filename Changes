@@ -1,5 +1,28 @@
 Revision history for Perl module CPAN::Reporter
 
+1.07_02 Sat Jan 19 20:33:55 EST 2008
+
+    - Added have_tested() function to CPAN::Reporter::History; provide ability
+      to search the CPAN::Reporter history file
+    
+    - Bug fix: PL files that warned "OS Unsupported" and exited with 0 will
+      now be flagged as NA; this bends the CPAN Testers "rules" slightly, but
+      "OS Unsupported" is a hack anyway, so this should help things DWIM
+    
+    - Test fix: more changes to timeout testing to avoid false failures
+
+    - Authors will never be CC'd on reports when running maint/blead perl
+      (anything with $Config{perl_patchlevel} set)
+
+    - Reports discarded due to missing prerequisites will now be recorded
+      in the history file with a 'grade' of DISCARD (unless a duplicate
+      DISCARD already exists)
+    
+    - Changed "edit_report" prompt to clarify this can be used to review
+      reports in addition to just editing them
+
+    - Shortened duplicate report warning to fit on one line
+    
 1.07_01 Tue Jan  8 01:41:02 EST 2008
 
     - Added "cc_skipfile" and "send_skipfile" advanced config options to 

@@ -119,6 +119,17 @@ my @cases = (
         is_dup => 1,
     },
     {
+        label => "first discard",
+        name => 't-PrereqMiss',
+        version => 9.11,
+        prereq => { 'Bogus::Module::Doesnt::Exist' => 0 },
+        grade => "discard",
+        phase => "test",
+        command => "$make test",
+        send_dup => "no",
+        is_dup => 0,
+    },
+    {
         label => "third test failure (new version)",
         name => "t-Fail",
         version => 1.24,
@@ -128,6 +139,17 @@ my @cases = (
         send_dup => "no",
         is_dup => 0,
     },
+    {
+        label => "second discard",
+        name => 't-PrereqMiss',
+        version => 9.11,
+        prereq => { 'Bogus::Module::Doesnt::Exist' => 0 },
+        grade => "discard",
+        phase => "test",
+        command => "$make test",
+        send_dup => "no",
+        is_dup => 1,
+    },
 );
 
 my $expected_history_lines = 1; # opening comment line
@@ -136,8 +158,9 @@ for my $c ( @cases ) {
     $expected_history_lines++ if not $c->{is_dup}
 }
 
-plan tests => 4 + $expected_history_lines 
-                + @cases * ( test_fake_config_plan() + test_dispatch_plan() );
+plan tests => 5 + $expected_history_lines 
+                + @cases * ( 3 + test_fake_config_plan() 
+                               + test_dispatch_plan() );
 
 #--------------------------------------------------------------------------#
 # subs
@@ -150,7 +173,7 @@ sub history_format {
     my $perl_ver = "perl-" . CPAN::Reporter::History::_perl_version(); 
     $perl_ver .= " patch $Config{perl_patchlevel}" if $Config{perl_patchlevel};
     my $arch = "$Config{archname} $Config{osvers}";
-    my $dist_name = CPAN::Reporter::_format_distname($dist);
+    my $dist_name = $dist->base_id;
     return "$phase $grade $dist_name ($perl_ver) $arch\n";
 }
 
@@ -173,14 +196,36 @@ for my $case ( @cases ) {
         %mock_dist_info,
         pretty_id => "JOHNQP/Bogus-Module-$case->{version}.tar.gz",
     );
+    $case->{dist}{prereq_pm} = $case->{prereq} if $case->{prereq};
     test_dispatch( 
         $case, 
-        will_send => (! $case->{is_dup}) || ( $case->{send_dup} eq 'yes' )
+        will_send => ($case->{grade} ne 'discard') && 
+                     (! $case->{is_dup}) || ( $case->{send_dup} eq 'yes' )
     );
     if ( not $case->{is_dup} ) {
         push @results, history_format($case);
     }
+    my @found;
+    ok( @found = CPAN::Reporter::History::have_tested(
+            dist => $case->{dist}->base_id ),
+        "$case->{label}: have_tested( base_id ) is true"
+    );
+    is( ref($found[0]), 'HASH',
+        "$case->{label}: have_tested returns AoH"
+    );
+    is( $found[0]{dist}, $case->{dist}->base_id,
+        "$case->{label}: have_tested struct has dist name"
+    ); 
+
 }
+
+#--------------------------------------------------------------------------#
+# have_tested fails
+#--------------------------------------------------------------------------#
+
+ok( ! CPAN::Reporter::History::have_tested( dist => "AADFASDFADSFASD" ),
+    "have_tested() returns false if not found"
+);
 
 #--------------------------------------------------------------------------#
 # Check history file format
@@ -207,7 +252,5 @@ for my $i ( 0 .. $#results ) {
         "history matched results[$i]"
     );
 }
-
- 
 
 

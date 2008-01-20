@@ -1,7 +1,8 @@
 package CPAN::Reporter;
 use strict;
-
-$CPAN::Reporter::VERSION = '1.07_01'; 
+use vars qw/$VERSION/;
+$VERSION = '1.07_02'; 
+$VERSION = eval $VERSION;
 
 use Config;
 use CPAN ();
@@ -38,8 +39,10 @@ sub grade_make {
         $CPAN::Frontend->mywarn( 
             "\nCPAN::Reporter: test results were not valid, $result->{grade_msg}.\n\n",
             $result->{prereq_pm}, "\n",
-            "Test results for $result->{dist_name} will be discarded"
+            "Test report will not be sent"
         );
+        CPAN::Reporter::History::_record_history( $result ) 
+            if not CPAN::Reporter::History::_is_duplicate( $result );
     }
     else {
         _print_grade_msg($result->{make_cmd}, $result);
@@ -56,8 +59,10 @@ sub grade_PL {
         $CPAN::Frontend->mywarn( 
             "\nCPAN::Reporter: test results were not valid, $result->{grade_msg}.\n\n",
             $result->{prereq_pm}, "\n",
-            "Test results for $result->{dist_name} will be discarded"
+            "Test report will not be sent"
         );
+        CPAN::Reporter::History::_record_history( $result ) 
+            if not CPAN::Reporter::History::_is_duplicate( $result );
     }
     else {
         _print_grade_msg($result->{PL_file} , $result);
@@ -74,8 +79,10 @@ sub grade_test {
         $CPAN::Frontend->mywarn( 
             "\nCPAN::Reporter: test results were not valid, $result->{grade_msg}.\n\n",
             $result->{prereq_pm}, "\n",
-            "Test results for $result->{dist_name} will be discarded"
+            "Test report will not be sent"
         );
+        CPAN::Reporter::History::_record_history( $result ) 
+            if not CPAN::Reporter::History::_is_duplicate( $result );
     }
     else {
         _print_grade_msg( "Test", $result );
@@ -380,9 +387,8 @@ END_SKIP_DIST
         if ( _prompt( $config, "send_duplicates", $tr->grade) =~ /^n/ ) {
             $CPAN::Frontend->mywarn(<< "DUPLICATE_REPORT");
 
-CPAN::Reporter: it seems that "@{[$tr->subject]}"
-during the $phase phase is a duplicate of a previous report you 
-sent to CPAN Testers.
+CPAN::Reporter: this appears to be a duplicate report for the $phase phase:
+@{[$tr->subject]}
 
 Test report will not be sent.
 
@@ -459,8 +465,10 @@ sub _downgrade_known_causes {
     my ($grade, $output) = ( $result->{grade}, $result->{output} );
     my $msg = $result->{grade_msg} || q{};
 
-    # shortcut unless fail/unknown
-    return if $grade eq 'pass' || $grade eq 'na';
+    # shortcut unless fail/unknown; but PL might look like pass but actually
+    # have "OS Unsupported" messages
+    return if $grade eq 'na';
+    return if $grade eq 'pass' && $result->{phase} ne 'PL';
 
     # get prereqs
     _expand_result( $result ); 
@@ -569,17 +577,6 @@ sub _env_report {
 }
 
 #--------------------------------------------------------------------------#
-# _format_distname
-#--------------------------------------------------------------------------#
-
-sub _format_distname {
-    my $dist = shift;
-    my $basename = basename( $dist->pretty_id );
-    $basename =~ s/(\.tar\.(?:gz|bz2)|\.tgz|\.zip)$//i;
-    return $basename;
-}
-
-#--------------------------------------------------------------------------#
 # _has_recursive_make
 #
 # Ignore Makefile.PL in t directories 
@@ -620,7 +617,7 @@ sub _init_result {
         exit_value => $exit_value,
         # Note: pretty_id is like "DAGOLDEN/CPAN-Reporter-0.40.tar.gz"
         dist_basename => basename($dist->pretty_id),
-        dist_name => _format_distname( $dist ),
+        dist_name => $dist->base_id,
     };
 
     # Used in messages to user
@@ -943,6 +940,9 @@ ENDREPORT
 
 sub _should_copy_author {
     my ($result, $config) = @_;
+
+    # Don't copy author on perls with patchlevels
+    return if $Config{perl_patchlevel};
 
     # User prompts for action
     my $author_email = $result->{author_id} 
@@ -1374,7 +1374,7 @@ David A. Golden (DAGOLDEN)
 
 = COPYRIGHT AND LICENSE
 
-Copyright (c) 2006, 2007 by David A. Golden
+Copyright (c) 2006, 2007, 2008 by David A. Golden
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
