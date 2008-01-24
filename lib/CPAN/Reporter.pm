@@ -1,7 +1,7 @@
 package CPAN::Reporter;
 use strict;
 use vars qw/$VERSION/;
-$VERSION = '1.07_04'; 
+$VERSION = '1.07_05'; 
 $VERSION = eval $VERSION;
 
 use Config;
@@ -12,7 +12,6 @@ use File::Find ();
 use File::HomeDir ();
 use File::Path qw/mkpath rmtree/;
 use File::Spec ();
-use File::Temp 0.16 ();
 use IO::File ();
 use Probe::Perl ();
 use Tee qw/tee/;
@@ -96,16 +95,10 @@ sub record_command {
 
     my ($cmd, $redirect) = _split_redirect($command);
 
-    my $temp_out = File::Temp->new( 
-        TEMPLATE => 'CPAN-Reporter-TO-XXXXXXXX', DIR => File::Spec->tmpdir()
-    ) or die "Could not create a temporary file for output: $!";
+    my $temp_out = _temp_filename( 'CPAN-Reporter-TO-' );
 
     # Teeing a command loses its exit value so we must wrap the command 
     # and print the exit code so we can read it off of output
-    my $cmdwrapper = File::Temp->new( 
-        TEMPLATE => 'CPAN-Reporter-CW-XXXXXXXX', DIR => File::Spec->tmpdir() 
-    ) or die "Could not create a wrapper for $cmd\: $!";
-
     my $wrap_code;
     if ( $timeout ) {
         $wrap_code = $^O eq 'MSWin32'
@@ -122,23 +115,33 @@ print "($safecmd exited with \$ec)\\n";
 HERE
     }
 
-    print {$cmdwrapper} $wrap_code;
-    $cmdwrapper->close;
+    # write code to a tempfile for execution
+    my $wrapper_name = _temp_filename( 'CPAN-Reporter-CW-' );
+    my $wrapper_fh = IO::File->new( $wrapper_name, 'w' )
+        or die "Could not create a wrapper for $cmd\: $!";
+
+    $wrapper_fh->print( $wrap_code );
+    $wrapper_fh->close;
     
     # tee the command wrapper
-    my $tee_input = Probe::Perl->find_perl_interpreter() .  " $cmdwrapper";
+    my $tee_input = Probe::Perl->find_perl_interpreter() .  " $wrapper_name";
     $tee_input .= " $redirect" if defined $redirect;
     tee($tee_input, { stderr => 1 }, $temp_out);
         
     # read back the output
-    my $temp_out2 = IO::File->new($temp_out->filename, "<");
-    if ( !$temp_out2 ) {
+    my $output_fh = IO::File->new($temp_out, "r");
+    if ( !$output_fh ) {
         $CPAN::Frontend->mywarn( 
             "CPAN::Reporter: couldn't read command results for '$cmd'\n" 
         );
         return;
     }
-    my @cmd_output = <$temp_out2>;
+    my @cmd_output = <$output_fh>;
+    $output_fh->close;
+
+    # cleanup
+    unlink $wrapper_name, $temp_out;
+
     if ( ! @cmd_output ) {
         $CPAN::Frontend->mywarn( 
             "CPAN::Reporter: didn't capture command results for '$cmd'\n"
@@ -1017,6 +1020,28 @@ sub _split_redirect {
 }
 
 #--------------------------------------------------------------------------#
+# _temp_filename -- stand-in for File::Temp for backwards compatibility
+#
+# takes an optional prefix, adds 8 random chars and returns 
+# an absolute pathname
+#
+# NOTE -- manual unlink required
+#--------------------------------------------------------------------------#
+
+# @CHARS from File::Temp
+my @CHARS = (qw/ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+                 a b c d e f g h i j k l m n o p q r s t u v w x y z
+                 0 1 2 3 4 5 6 7 8 9 _
+             /);
+
+sub _temp_filename {
+    my ($prefix) = @_;
+    $prefix = q{} unless defined $prefix;
+    $prefix .= $CHARS[ int( rand(@CHARS) ) ] for 0 .. 7;
+    return File::Spec->catfile(File::Spec->tmpdir(), $prefix);
+}
+
+#--------------------------------------------------------------------------#
 # _timeout_wrapper
 #--------------------------------------------------------------------------#
 
@@ -1186,13 +1211,15 @@ sub _version_finder {
     my $perl = Probe::Perl->find_perl_interpreter();
     my @prereq_results;
     
-    my $prereq_input = File::Temp->new( 
-        TEMPLATE => 'CPAN-Reporter-PI-XXXXXXXX', DIR => File::Spec->tmpdir() 
-    ) or die "Could not create temporary input for prereq analysis: $!";
-    $prereq_input->print( map { "$_ $prereqs{$_}\n" } keys %prereqs );
-    $prereq_input->close;
+    my $prereq_input = _temp_filename( 'CPAN-Reporter-PI-' );
+    my $fh = IO::File->new( $prereq_input, "w" )
+        or die "Could not create temporary '$prereq_input' for prereq analysis: $!";
+    $fh->print( map { "$_ $prereqs{$_}\n" } keys %prereqs );
+    $fh->close;
 
     my $prereq_result = qx/$perl $version_finder < $prereq_input/;
+
+    unlink $prereq_input;
 
     my %result;
     for my $line ( split "\n", $prereq_result ) {
