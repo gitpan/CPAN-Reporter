@@ -1,7 +1,7 @@
 package CPAN::Reporter::Config;
 use strict; 
 use vars qw/$VERSION/;
-$VERSION = '1.07_05'; 
+$VERSION = '1.07_06'; 
 $VERSION = eval $VERSION;
 
 use Config::Tiny ();
@@ -287,6 +287,11 @@ HERE
         default => undef,
         validate => \&_validate_skipfile,
     },
+    command_timeout => {
+        prompt => "If no timeout is set by CPAN, halt system commands after how many seconds?",
+        default => undef,
+        validate => \&_validate_seconds,
+    },
     email_to => {
         default => undef,
     },
@@ -484,6 +489,12 @@ sub _validate_grade_action_pair {
     return scalar(keys %ga_map) ? \%ga_map : undef;
 }
 
+sub _validate_seconds {
+    my ($name, $option) = @_;
+    return unless $option && ($option =~ /^\d/) && $option > 0;
+    return $option;
+}
+
 sub _validate_skipfile {
     my ($name, $option) = @_;
     return unless $option;
@@ -628,15 +639,21 @@ A better way to disable CPAN::Reporter temporarily is with the CPAN option
 
 These additional options are only necessary in special cases, for example if
 the default editor cannot be found or if reports shouldn't be sent in 
-certain situations.
+certain situations or for automated testing, and so on.
 
-* {cc_author = <grade:action> ...} -- should module authors should be sent a copy of 
-the test report at their {author@cpan.org} address? (default:yes pass/na:no)
+* {cc_author = <grade:action> ...} -- should module authors should be sent a 
+copy of the test report at their {author@cpan.org} address? 
+(default:yes pass/na:no)
 * {cc_skipfile = <skipfile>} -- filename containing regular expressions (one
 per line) to match against the distribution ID (e.g. 
 'AUTHOR/Dist-Name-0.01.tar.gz'); the author will not be copied if a match is 
 found regardless of cc_author; non-absolute filename must be in the .cpanreporter 
 config directory
+* {command_timeout} -- if set and the CPAN config {inactivity_timeout} is not, 
+then any commands executed by CPAN::Reporter will be halted after this many 
+seconds; useful for unattended smoke testing to stop after some amount of time;
+generally, this should be large -- 900 seconds or more -- as some 
+distributions' tests take quite a long time to run
 * {editor = <editor>} -- editor to use to edit the test report; if not set,
 Test::Reporter will use environment variables {VISUAL}, {EDITOR} or {EDIT}
 (in that order) to find an editor 

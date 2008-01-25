@@ -1,7 +1,7 @@
 package CPAN::Reporter;
 use strict;
 use vars qw/$VERSION/;
-$VERSION = '1.07_05'; 
+$VERSION = '1.07_06'; 
 $VERSION = eval $VERSION;
 
 use Config;
@@ -32,10 +32,10 @@ sub configure {
 
 sub grade_make { 
     my @args = @_;
-    my $result = _init_result( 'make', @args ); 
+    my $result = _init_result( 'make', @args ) or return; 
     _compute_make_grade($result);
     if ( $result->{grade} eq 'discard' ) {
-        $CPAN::Frontend->mywarn( 
+        $CPAN::Frontend->myprint( 
             "\nCPAN::Reporter: test results were not valid, $result->{grade_msg}.\n\n",
             $result->{prereq_pm}, "\n",
             "Test report will not be sent"
@@ -52,10 +52,10 @@ sub grade_make {
 
 sub grade_PL {
     my @args = @_;
-    my $result = _init_result( 'PL', @args ); ## no critic
+    my $result = _init_result( 'PL', @args ) or return; 
     _compute_PL_grade($result);
     if ( $result->{grade} eq 'discard' ) {
-        $CPAN::Frontend->mywarn( 
+        $CPAN::Frontend->myprint( 
             "\nCPAN::Reporter: test results were not valid, $result->{grade_msg}.\n\n",
             $result->{prereq_pm}, "\n",
             "Test report will not be sent"
@@ -72,10 +72,10 @@ sub grade_PL {
 
 sub grade_test {
     my @args = @_;
-    my $result = _init_result( 'test', @args ); ## no critic
+    my $result = _init_result( 'test', @args ) or return; 
     _compute_test_grade($result);
     if ( $result->{grade} eq 'discard' ) {
-        $CPAN::Frontend->mywarn( 
+        $CPAN::Frontend->myprint( 
             "\nCPAN::Reporter: test results were not valid, $result->{grade_msg}.\n\n",
             $result->{prereq_pm}, "\n",
             "Test report will not be sent"
@@ -92,6 +92,15 @@ sub grade_test {
 
 sub record_command {
     my ($command, $timeout) = @_;
+
+    # XXX refactor this! 
+    # Get configuration options
+    my $config_obj = CPAN::Reporter::Config::_open_config_file();
+    my $config;
+    $config = CPAN::Reporter::Config::_get_config_options( $config_obj ) 
+        if $config_obj;
+
+    $timeout ||= $config->{command_timeout}; # might still be undef
 
     my ($cmd, $redirect) = _split_redirect($command);
 
@@ -168,12 +177,6 @@ HERE
 sub test {
     my ($dist, $system_command) = @_;
     my ($output, $exit_value) = record_command( $system_command );
-    unless ( defined $output && defined $exit_value ) {
-        $CPAN::Frontend->mywarn(
-            "CPAN::Reporter: had errors capturing output. Tests abandoned"
-        );
-        return;
-    }
     return grade_test( $dist, $system_command, $output, $exit_value );
 }
 
@@ -368,7 +371,7 @@ END_BAD_DISTNAME
             # if it doesn't match, continue with next pattern
             next if $dist_id !~ /$pattern/;
             # if it matches, warn and return
-            $CPAN::Frontend->mywarn( << "END_SKIP_DIST" );
+            $CPAN::Frontend->myprint( << "END_SKIP_DIST" );
 CPAN::Reporter: '$dist_id' matched against the send_skipfile.  
 
 Test report will not be sent.
@@ -388,7 +391,7 @@ END_SKIP_DIST
     my $is_duplicate = CPAN::Reporter::History::_is_duplicate( $result );
     if ( $is_duplicate ) {
         if ( _prompt( $config, "send_duplicates", $tr->grade) =~ /^n/ ) {
-            $CPAN::Frontend->mywarn(<< "DUPLICATE_REPORT");
+            $CPAN::Frontend->myprint(<< "DUPLICATE_REPORT");
 
 CPAN::Reporter: this appears to be a duplicate report for the $phase phase:
 @{[$tr->subject]}
@@ -475,6 +478,13 @@ sub _downgrade_known_causes {
 
     # get prereqs
     _expand_result( $result ); 
+
+    # if process was halted with a signal, just set for discard and return
+    if ( $result->{exit_value} & 127 ) {
+        $result->{grade} = 'discard';
+        $result->{grade_msg} = 'Command interrupted';
+        return;
+    }
 
     # look for perl version error messages from various programs
     # "Error evaling..." type errors happen on Perl < 5.006 when modules
@@ -611,6 +621,13 @@ sub _has_recursive_make {
 sub _init_result {
     my ($phase, $dist, $system_command, $output, $exit_value) = @_;
     
+    unless ( defined $output && defined $exit_value ) {
+        $CPAN::Frontend->mywarn(
+            "CPAN::Reporter: had errors capturing output. Tests abandoned"
+        );
+        return;
+    }
+
     my $result = {
         phase => $phase,
         dist => $dist,
@@ -964,7 +981,7 @@ sub _should_copy_author {
             # if it doesn't match, continue with next pattern
             next if $dist_id !~ /$pattern/;
             # if it matches, warn and return
-            $CPAN::Frontend->mywarn( << "END_SKIP_DIST" );
+            $CPAN::Frontend->myprint( << "END_SKIP_DIST" );
 CPAN::Reporter: '$dist_id' matched against the cc_skipfile.  Won't copy author.
 END_SKIP_DIST
             return;
@@ -1064,12 +1081,13 @@ eval {
         my $wstat = waitpid $pid, 0;
         $exitcode = $wstat == -1 ? -1 : $?;
     } else {    #child
+        setpgrp; # new process group for targeted kill
         exec "%s";
     }
 };
 alarm 0;
 if ($pid && $@ =~ /Timeout/){
-    kill 9, $pid;
+    kill -9, $pid;
     my $wstat = waitpid $pid, 0;
     $exitcode = $wstat == -1 ? -1 : $?;
 }
