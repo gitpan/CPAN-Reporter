@@ -4,20 +4,16 @@ TODO list for Perl module CPAN::Reporter
 # Bugs
 #--------------------------------------------------------------------------#
 
-- command_timeout should accept 0 as a way of disabling it
-
-- skipfiles patterns should match case-insensitive (Cantrell); also, 
-  document lack of starting anchor
-
 #--------------------------------------------------------------------------#
 # Features, etc
 #--------------------------------------------------------------------------#
 
 # High priority
 
-- check for how to confirm portability of setpgrp and kill
 
 # Medium priority 
+
+- check for how to confirm portability of setpgrp and kill
 
 - add support for a "comment.txt" file in the config directory to use
   in place of the default comment
