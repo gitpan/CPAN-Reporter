@@ -1,7 +1,7 @@
 package CPAN::Reporter;
 use strict;
 use vars qw/$VERSION/;
-$VERSION = '1.11'; 
+$VERSION = '1.12'; 
 $VERSION = eval $VERSION;
 
 use Config;
@@ -1046,6 +1046,7 @@ HERE
         my $getosversion = join(", ", @getosversion);
         $special_vars .= "    Win32::GetOSName = " . Win32::GetOSName() . "\n";
         $special_vars .= "    Win32::GetOSVersion = $getosversion\n";
+        $special_vars .= "    Win32::FsType = " . Win32::FsType() . "\n";
         $special_vars .= "    Win32::IsAdminUser = " . Win32::IsAdminUser() . "\n";
     }
     return $special_vars;
@@ -1274,6 +1275,13 @@ sub _version_finder {
     my %result;
     for my $line ( split "\n", $prereq_result ) {
         my ($mod, $met, $have) = split " ", $line;
+        unless ( defined($mod) && defined($met) && defined($have) ) {
+            $CPAN::Frontend->mywarn(
+                "Error parsing output from CPAN::Reporter::PrereqCheck:\n" .
+                $line
+            );
+            next;
+        }
         $result{$mod}{have} = $have;
         $result{$mod}{met} = $met;
     }
