@@ -1,7 +1,7 @@
 package CPAN::Reporter;
 use strict;
 use vars qw/$VERSION/;
-$VERSION = '1.14_01'; 
+$VERSION = '1.14_02'; 
 $VERSION = eval $VERSION;
 
 use Config;
@@ -421,7 +421,8 @@ DUPLICATE_REPORT
     eval { $tr->transport( @transport_args ) };
     if ($@) {
         $CPAN::Frontend->mywarn(
-            "CPAN::Reporter: '$transport' is not a valid transport option.\n" .
+            "CPAN::Reporter: problem with Test::Reporter transport: \n" .
+            "$@\n" .
             "Test report will not be sent\n"
         );
         return;
