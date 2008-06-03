@@ -1,7 +1,7 @@
 package CPAN::Reporter;
 use strict;
 use vars qw/$VERSION/;
-$VERSION = '1.15'; 
+$VERSION = '1.15_50'; 
 $VERSION = eval $VERSION;
 
 use Config;
@@ -13,6 +13,7 @@ use File::HomeDir ();
 use File::Path qw/mkpath rmtree/;
 use File::Spec ();
 use IO::File ();
+use Parse::CPAN::Meta ();
 use Probe::Perl ();
 use Tee qw/tee/;
 use Test::Reporter ();
@@ -137,8 +138,13 @@ HERE
     # tee the command wrapper
     my $tee_input = Probe::Perl->find_perl_interpreter() .  " $wrapper_name";
     $tee_input .= " $redirect" if defined $redirect;
-    tee($tee_input, { stderr => 1 }, $temp_out);
-        
+    {
+      # ensure autoflush
+      local $ENV{PERL5OPT} = $ENV{PERL5OPT} || q{};
+      $ENV{PERL5OPT} .= ' -MDevel::Autoflush ';
+      tee($tee_input, { stderr => 1 }, $temp_out);
+    }
+
     # read back the output
     my $output_fh = IO::File->new($temp_out, "r");
     if ( !$output_fh ) {
@@ -346,6 +352,9 @@ EMAIL_REQUIRED
         return;
     }
         
+    # Need to know if this is a duplicate
+    my $is_duplicate = CPAN::Reporter::History::_is_duplicate( $result );
+
     # Abort if the distribution name is not formatted according to 
     # CPAN Testers requirements: Dist-Name-version.suffix
     # Regex from CPAN-Testers should extract name, separator, version
@@ -364,6 +373,10 @@ Test report will not be sent.
 
 END_BAD_DISTNAME
 
+        # record this as a discard, instead
+        $result->{grade} = 'discard';
+        CPAN::Reporter::History::_record_history( $result ) 
+            if not $is_duplicate;
         return;
     }
 
@@ -398,7 +411,6 @@ END_SKIP_DIST
     $tr->distribution( $result->{dist_name}  );
 
     # Skip if duplicate and not sending duplicates
-    my $is_duplicate = CPAN::Reporter::History::_is_duplicate( $result );
     if ( $is_duplicate ) {
         if ( _prompt( $config, "send_duplicates", $tr->grade) =~ /^n/ ) {
             $CPAN::Frontend->myprint(<< "DUPLICATE_REPORT");
@@ -769,12 +781,14 @@ sub _parse_test_harness {
 # _prereq_report
 #--------------------------------------------------------------------------#
 
+my @prereq_sections = qw/requires build_requires configure_requires/;
+
 sub _prereq_report {
     my $dist = shift;
     my (%need, %have, %prereq_met, $report);
     
+    # Extract requires/build_requires from CPAN dist
     my $prereq_pm = $dist->prereq_pm;
-
     if ( ref $prereq_pm eq 'HASH' ) {
         # is it the new CPAN style with requires/build_requires?
         if (join(q{ }, sort keys %$prereq_pm) eq "build_requires requires") {
@@ -788,8 +802,21 @@ sub _prereq_report {
         }
     }
 
+    # Extract configure_requires from META.yml if it exists
+    if ( $dist->{build_dir} && -d $dist->{build_dir} ) {
+      my $meta_yml = File::Spec->catfile($dist->{build_dir}, 'META.yml');
+      if ( -f $meta_yml ) {
+        my @yaml = Parse::CPAN::Meta::LoadFile($meta_yml);
+        if (  ref $yaml[0] eq 'HASH' && 
+              ref $yaml[0]{configure_requires} eq 'HASH' 
+        ) {
+          $need{configure_requires} = $yaml[0]{configure_requires};
+        }
+      }
+    }
+
     # see what prereqs are satisfied in subprocess
-    for my $section ( qw/requires build_requires/ ) {
+    for my $section ( @prereq_sections ) {
         next unless ref $need{$section} eq 'HASH';
         my @prereq_list = %{ $need{$section} };
         next unless @prereq_list;
@@ -802,7 +829,7 @@ sub _prereq_report {
     
     # find formatting widths 
     my ($name_width, $need_width, $have_width) = (6, 4, 4);
-    for my $section ( qw/requires build_requires/ ) {
+    for my $section ( @prereq_sections ) {
         for my $module ( keys %{ $need{$section} } ) {
             my $name_length = length $module;
             my $need_length = length $need{$section}{$module};
@@ -817,7 +844,7 @@ sub _prereq_report {
         "  \%1s \%-${name_width}s \%-${need_width}s \%-${have_width}s\n";
 
     # generate the report
-    for my $section ( qw/requires build_requires/ ) {
+    for my $section ( @prereq_sections ) {
         if ( keys %{ $need{$section} } ) {
             $report .= "$section:\n\n";
             $report .= sprintf( $format_str, " ", qw/Module Need Have/ );

@@ -1,7 +1,7 @@
 package CPAN::Reporter::Config;
 use strict; 
 use vars qw/$VERSION/;
-$VERSION = '1.15'; 
+$VERSION = '1.15_50'; 
 $VERSION = eval $VERSION;
 
 use Config::Tiny ();
@@ -313,7 +313,9 @@ sub _config_spec { return %option_specs }
 #--------------------------------------------------------------------------#
 
 sub _get_config_dir {
-    if ( defined $ENV{PERL_CPAN_REPORTER_DIR} ) {
+    if ( defined $ENV{PERL_CPAN_REPORTER_DIR} && 
+         length  $ENV{PERL_CPAN_REPORTER_DIR} 
+    ) {
         return $ENV{PERL_CPAN_REPORTER_DIR};
     }
     else {
@@ -328,7 +330,9 @@ sub _get_config_dir {
 #--------------------------------------------------------------------------#
 
 sub _get_config_file {
-    if ( defined $ENV{PERL_CPAN_REPORTER_CONFIG} ) {
+    if (  defined $ENV{PERL_CPAN_REPORTER_CONFIG} &&
+          length  $ENV{PERL_CPAN_REPORTER_CONFIG} 
+    ) {
         return $ENV{PERL_CPAN_REPORTER_CONFIG};
     }
     else {
