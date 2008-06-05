@@ -1,7 +1,7 @@
 package CPAN::Reporter;
 use strict;
 use vars qw/$VERSION/;
-$VERSION = '1.15_52'; 
+$VERSION = '1.15_53'; 
 $VERSION = eval $VERSION;
 
 use Config;
@@ -141,7 +141,8 @@ HERE
     {
       # ensure autoflush
       local $ENV{PERL5OPT} = $ENV{PERL5OPT} || q{};
-      $ENV{PERL5OPT} .= ' -MDevel::Autoflush ';
+      $ENV{PERL5OPT} .= q{ } if length $ENV{PERL5OPT};
+      $ENV{PERL5OPT} .= '-MDevel::Autoflush';
       tee($tee_input, { stderr => 1 }, $temp_out);
     }
 
