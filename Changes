@@ -1,5 +1,12 @@
 Revision history for Perl module CPAN::Reporter
 
+1.15_54 Fri Jun  6 14:06:57 EDT 2008
+
+    - Fixed: would disconnect from terminal input when running interactively 
+      with an inactivity timeout; fixed by avoiding use of setpgrp(), but
+      now requires Proc::Killfam to support inactivity timeouts on non Win32 
+      platforms. (Bug reported by Andy Armstrong)
+
 1.15_53 Thu Jun  5 06:37:13 EDT 2008
 
     - Fixed: PERL5OPT could was being set with a leading space, which can
