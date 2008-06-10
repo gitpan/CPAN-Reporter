@@ -1,7 +1,7 @@
 package CPAN::Reporter;
 use strict;
 use vars qw/$VERSION/;
-$VERSION = '1.15_54'; 
+$VERSION = '1.15_55'; 
 $VERSION = eval $VERSION;
 
 use Config;
@@ -807,7 +807,12 @@ sub _prereq_report {
     if ( $dist->{build_dir} && -d $dist->{build_dir} ) {
       my $meta_yml = File::Spec->catfile($dist->{build_dir}, 'META.yml');
       if ( -f $meta_yml ) {
-        my @yaml = Parse::CPAN::Meta::LoadFile($meta_yml);
+        my @yaml = eval { Parse::CPAN::Meta::LoadFile($meta_yml) };
+        if ( $@ ) {
+          $CPAN::Frontend->mywarn( 
+            "CPAN::Reporter: error parsing META.yml\n"
+          );
+        }
         if (  ref $yaml[0] eq 'HASH' && 
               ref $yaml[0]{configure_requires} eq 'HASH' 
         ) {
