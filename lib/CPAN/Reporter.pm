@@ -1,7 +1,7 @@
 package CPAN::Reporter;
 use strict;
 use vars qw/$VERSION/;
-$VERSION = '1.15_55'; 
+$VERSION = '1.15_56'; 
 $VERSION = eval $VERSION;
 
 use Config;
@@ -140,9 +140,12 @@ HERE
     $tee_input .= " $redirect" if defined $redirect;
     {
       # ensure autoflush
+      require Devel::Autoflush;
+      my $inc_path = $INC{'Devel/Autoflush.pm'};
+      $inc_path =~ s{/Devel/Autoflush.pm$}{};
       local $ENV{PERL5OPT} = $ENV{PERL5OPT} || q{};
       $ENV{PERL5OPT} .= q{ } if length $ENV{PERL5OPT};
-      $ENV{PERL5OPT} .= '-MDevel::Autoflush';
+      $ENV{PERL5OPT} .= "-I$inc_path -MDevel::Autoflush";
       tee($tee_input, { stderr => 1 }, $temp_out);
     }
 
@@ -1412,12 +1415,6 @@ Users will need to enter an email address in one of the following formats:
  johndoe@example.com
  John Doe <johndoe@example.com>
  "John Q. Public" <johnqpublic@example.com>
-
-Because {cpan-testers} uses a mailing list to collect test reports, it is
-helpful if the email address provided is subscribed to the list.  Otherwise,
-test reports will be held until manually reviewed and approved.  Subscribing an
-account to the cpan-testers list is as easy as sending a blank email to
-cpan-testers-subscribe@perl.org and replying to the confirmation email.
 
 Users will also be prompted to enter the name of an outbound email server.  It
 is recommended to use an email server provided by the user's ISP or company.
