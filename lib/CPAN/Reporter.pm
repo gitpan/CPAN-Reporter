@@ -1,17 +1,18 @@
 package CPAN::Reporter;
 use strict;
 use vars qw/$VERSION/;
-$VERSION = '1.1601'; 
+$VERSION = '1.16_50'; 
 $VERSION = eval $VERSION;
 
 use Config;
 use CPAN ();
 use CPAN::Version ();
-use File::Basename qw/basename/;
+use File::Basename qw/basename dirname/;
 use File::Find ();
 use File::HomeDir ();
 use File::Path qw/mkpath rmtree/;
 use File::Spec ();
+use File::Temp qw/tempdir/;
 use IO::File ();
 use Parse::CPAN::Meta ();
 use Probe::Perl ();
@@ -22,6 +23,22 @@ use CPAN::Reporter::History ();
 use CPAN::Reporter::PrereqCheck ();
 
 use constant MAX_OUTPUT_LENGTH => 50_000;
+
+#--------------------------------------------------------------------------#
+# create temp lib dir for Devel::Autoflush
+# so that PERL5OPT=-MDevel::Autoflush is found by any perl
+#--------------------------------------------------------------------------#
+
+require Devel::Autoflush;
+# directory fixture
+my $Autoflush_Lib = tempdir( 
+  "CPAN-Reporter-lib-XXXX", TMPDIR => 1, CLEANUP => 1 
+);
+# copy Devel::Autoflush to directory or clear autoflush_lib variable
+_file_copy_quiet( 
+  $INC{'Devel/Autoflush.pm'}, 
+  File::Spec->catfile( $Autoflush_Lib, qw/Devel Autoflush.pm/ )
+) or undef $Autoflush_Lib;
 
 #--------------------------------------------------------------------------#
 # public API
@@ -139,10 +156,8 @@ HERE
     my $tee_input = Probe::Perl->find_perl_interpreter() .  " $wrapper_name";
     $tee_input .= " $redirect" if defined $redirect;
     {
-      # ensure autoflush
-      local $ENV{PERL5OPT} = $ENV{PERL5OPT} || q{};
-      $ENV{PERL5OPT} .= q{ } if length $ENV{PERL5OPT};
-      $ENV{PERL5OPT} .= "-MDevel::Autoflush";
+      # ensure autoflush if we can
+      local $ENV{PERL5OPT} = _get_perl5opt();
       tee($tee_input, { stderr => 1 }, $temp_out);
     }
 
@@ -607,6 +622,8 @@ my @env_vars= qw(
 
 sub _env_report {
     my @vars_found;
+    # mirror PERL5OPT as in record_command
+    local $ENV{PERL5OPT} = _get_perl5opt();
     for my $var ( @env_vars ) {
         if ( $var =~ m{^/(.+)/$} ) {
             push @vars_found, grep { /$1/ } keys %ENV;
@@ -623,6 +640,40 @@ sub _env_report {
         $report .= "    $var = $value\n";
     }
     return $report;
+}
+
+#--------------------------------------------------------------------------#
+# _file_copy_quiet
+#
+# manual file copy -- quietly return undef on failure
+#--------------------------------------------------------------------------#
+
+sub _file_copy_quiet {
+  my ($source, $target) = @_;
+  # ensure we have a target directory
+  mkpath( dirname($target) ) or return;
+  # read source
+  local *FH;
+  open FH, "<$source" or return;
+  my $pm_guts = do { local $/; <FH> };
+  close FH;
+  # write target
+  open FH, ">$target" or return;
+  print FH $pm_guts;
+  close FH;
+  return 1;
+}
+
+#--------------------------------------------------------------------------#
+# _get_perl5opt
+#--------------------------------------------------------------------------#
+
+sub _get_perl5opt {
+  my $perl5opt = $ENV{PERL5OPT} || q{};
+  if ( $Autoflush_Lib ) {
+    $perl5opt .= q{ } if length $perl5opt;
+    $perl5opt .= "-I$Autoflush_Lib -MDevel::Autoflush";
+  }
 }
 
 #--------------------------------------------------------------------------#
@@ -1026,7 +1077,6 @@ ENDREPORT
 
     return $output;
 }
-
 
 #--------------------------------------------------------------------------#
 # _should_copy_author
