@@ -8,7 +8,7 @@ CPAN::Reporter::API - Programmer's interface to CPAN::Reporter
 
 =head1 VERSION
 
-This documentation refers to version 1.1702
+This documentation refers to version 1.1703
 
 =head1 FUNCTIONS
 
@@ -36,6 +36,9 @@ exit code.  Returns an array reference of output lines (merged STDOUT and
 STDERR) and the return value from system().  Note that this is C<<< $? >>>, so the
 actual exit value of the command will need to be extracted as described in
 L<perlvar>.
+
+If the command matches E<sol>\b(?:MakefileE<verbar>Build)\.PL\bE<sol>, then L<Devel::Autoflush>
+is added to C<<< PERL5OPT >>> to force autoflushing of user prompts.
 
 If the command includes a pipe character ('E<verbar>'), only the part of the 
 command prior to the pipe will be wrapped and teed.  The pipe will be
