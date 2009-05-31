@@ -1,7 +1,7 @@
 package CPAN::Reporter;
 use strict;
 use vars qw/$VERSION/;
-$VERSION = '1.1705'; 
+$VERSION = '1.1706'; 
 $VERSION = eval $VERSION; ## no critic
 
 use Config;
@@ -423,6 +423,7 @@ END_SKIP_DIST
     my $tr = Test::Reporter->new;
     $tr->grade( $result->{grade} );
     $tr->distribution( $result->{dist_name}  );
+    $tr->distfile( $result->{dist}->pretty_id );
 
     # Skip if duplicate and not sending duplicates
     if ( $is_duplicate ) {
@@ -1005,7 +1006,7 @@ If you think this report is invalid, please consult the CPAN Testers Wiki
 for suggestions on how to avoid getting FAIL reports for missing library
 or binary dependencies, unsupported operating systems, and so on:
 
-http://cpantest.grango.org/wiki/CPANAuthorNotes
+http://wiki.cpantesters.org/wiki/CPANAuthorNotes
 HERE
 
     'unknown' => <<'HERE',
@@ -1017,7 +1018,7 @@ stage, did not define tests, tests could not be found, because your tests were
 interrupted before they finished, or because the results of the tests could not
 be parsed.  You may wish to consult the CPAN Testers Wiki:
 
-http://cpantest.grango.org/wiki/CPANAuthorNotes
+http://wiki.cpantesters.org/wiki/CPANAuthorNotes
 HERE
 
     'na' => <<'HERE',
@@ -1027,7 +1028,7 @@ either for this operating system or this version of Perl.  Nevertheless, any
 diagnostic output produced is provided below for reference.  If this is not 
 what you expect, you may wish to consult the CPAN Testers Wiki:
 
-http://cpantest.grango.org/wiki/CPANAuthorNotes
+http://wiki.cpantesters.org/wiki/CPANAuthorNotes
 HERE
     
 );
@@ -1524,7 +1525,7 @@ Information about CPAN::Testers:
 
 * [CPAN::Testers] -- overview of CPAN Testers architecture stack
 * [http://www.cpantesters.org] -- project home with all reports
-* [http://cpantest.grango.org] -- documentation and wiki
+* [http://wiki.cpantesters.org] -- documentation and wiki
 
 Additional Documentation: 
 
