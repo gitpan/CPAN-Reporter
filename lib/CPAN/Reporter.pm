@@ -1,7 +1,7 @@
 package CPAN::Reporter;
 use strict;
 use vars qw/$VERSION/;
-$VERSION = '1.1707'; 
+$VERSION = '1.1708'; 
 $VERSION = eval $VERSION; ## no critic
 
 use Config;
@@ -423,7 +423,8 @@ END_SKIP_DIST
     my $tr = Test::Reporter->new;
     $tr->grade( $result->{grade} );
     $tr->distribution( $result->{dist_name}  );
-    $tr->distfile( $result->{dist}->pretty_id );
+    # older T::R might not handle the distfile() method
+    $tr->distfile( $result->{dist}->pretty_id ) if $tr->can('distfile');
 
     # Skip if duplicate and not sending duplicates
     if ( $is_duplicate ) {
