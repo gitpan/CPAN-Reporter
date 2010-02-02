@@ -1,7 +1,7 @@
 package CPAN::Reporter::Config;
 use strict; 
 use vars qw/$VERSION/;
-$VERSION = '1.1708'; 
+$VERSION = '1.1709'; 
 $VERSION = eval $VERSION; ## no critic
 
 use Config::Tiny ();
@@ -710,6 +710,7 @@ set the 'transport' config option to the name of the transport module
 (without the 'Test::Reporter::Transport' prefix) and any required arguments,
 separated by white space. For example:
 
+  transport=Net::SMTP Port 587
   transport=Net::SMTP::TLS User jdoe@example.com Password 12345
   transport=HTTPGateway http://example.com/cpantesters.cgi MyKey
   transport=File ~/saved-reports-dir

@@ -392,7 +392,7 @@ sub test_grade_test {
             
             # Grade evaluation with special case if discarding
             my ($found_grade_result, $found_msg) = 
-                ( $stdout =~ /^CPAN::Reporter: (Test result[^,]+), ([^\n]+)$/ims );
+                ( $stdout =~ /^CPAN::Reporter: (Test result[^,]+), ([^\n]+)[.:]$/ims );
             if ( $case->{"$tool\_grade"} eq 'discard' ) {
                 is ($found_grade_result, "test results were not valid",
                     "$case->{name}: '$tool_label' prerequisites not satisifed"
@@ -432,7 +432,7 @@ sub test_grade_test {
             
             # Grade explanation message
             is( $found_msg, 
-                $case->{"$tool\_msg"} ? $case->{"$tool\_msg"} . q{.} : q{},
+                $case->{"$tool\_msg"} ? $case->{"$tool\_msg"} : q{},
                 "$case->{name}: '$tool_label' grade explanation correct"
             );
 
@@ -750,7 +750,8 @@ BEGIN {
 }
 
 package Test::Reporter;
-use vars qw/$AUTOLOAD/;
+use vars qw/$AUTOLOAD $VERSION/;
+$VERSION = 999; # more than 1.54 (e.g. distfile exists)
 
 sub new { return bless {}, 'Test::Reporter::Mocked' }
 
@@ -787,15 +788,6 @@ sub transport {
     return $mocked_data{transport};
 }
   
-# must do this one manually so ->can('distfile') is true
-sub distfile {
-  my $self = shift;
-  if ( @_ ) {
-    $mocked_data{ distfile } = shift;
-  }
-  return $mocked_data{ distfile };
-}
-
 sub AUTOLOAD {
     my $self = shift;
     if ( @_ ) {
