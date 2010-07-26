@@ -1,7 +1,7 @@
 package CPAN::Reporter;
 use strict;
 use vars qw/$VERSION/;
-$VERSION = '1.1711';
+$VERSION = '1.1800';
 $VERSION = eval $VERSION; ## no critic
 
 use Config;
@@ -362,6 +362,11 @@ sub _dispatch_report {
 CPAN::Reporter: required 'email_from' option missing an email address, so
 test report will not be sent. See documentation for configuration details.
 
+Even for non-email transports (e.g. Metabase, File or Socket) this email
+address will show up in the report and help identify the tester.
+This is required for compatibility with tools that process legacy reports
+for analysis.
+
 EMAIL_REQUIRED
         return;
     }
@@ -483,7 +488,7 @@ DUPLICATE_REPORT
                     : "send_report" ;
     if ( _prompt( $config, $send_config, $tr->grade ) =~ /^y/ ) {
         $CPAN::Frontend->myprint( "CPAN::Reporter: sending test report with '" . $tr->grade .
-              "' to " . $tr->address . "\n");
+              "' via " . $transport_args[0] . "\n");
         if ( $tr->send() ) {
             CPAN::Reporter::History::_record_history( $result )
                 if not $is_duplicate;
