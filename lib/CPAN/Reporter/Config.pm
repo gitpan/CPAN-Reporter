@@ -1,7 +1,7 @@
 package CPAN::Reporter::Config;
 use strict; 
 use vars qw/$VERSION/;
-$VERSION = '1.1800';
+$VERSION = '1.1801';
 $VERSION = eval $VERSION; ## no critic
 
 use Config::Tiny ();
@@ -308,11 +308,15 @@ sub _get_config_dir {
     ) {
         return $ENV{PERL_CPAN_REPORTER_DIR};
     }
-    else {
-        return ( $^O eq 'MSWin32' )
-            ? File::Spec->catdir(File::HomeDir->my_documents, ".cpanreporter")
-            : File::Spec->catdir(File::HomeDir->my_home, ".cpanreporter") ;
+
+    my $conf_dir = File::Spec->catdir(File::HomeDir->my_home, ".cpanreporter");
+
+    if ($^O eq 'MSWin32') {
+      my $alt_dir = File::Spec->catdir(File::HomeDir->my_documents, ".cpanreporter");
+      $conf_dir = $alt_dir if -d $alt_dir && ! -d $conf_dir;
     }
+
+    return $conf_dir;
 }
 
 #--------------------------------------------------------------------------#
@@ -532,8 +536,7 @@ From the CPAN shell:
 = DESCRIPTION
 
 Default options for CPAN::Reporter are read from a configuration file 
-{.cpanreporter/config.ini} in the user's home directory (Unix and OS X)
-or "My Documents" directory (Windows).
+{.cpanreporter/config.ini} in the user's home directory.
 
 The configuration file is in "ini" format, with the option name and value
 separated by an "=" sign
