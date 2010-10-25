@@ -1,7 +1,7 @@
 package CPAN::Reporter;
 use strict;
 use vars qw/$VERSION/;
-$VERSION = '1.1803';
+$VERSION = '1.18_05';
 $VERSION = eval $VERSION; ## no critic
 
 use Config;
@@ -1201,7 +1201,6 @@ sub _timeout_wrapper {
 use strict;
 my ($pid, $exitcode);
 eval {
-    setpgrp(0,0); # new process group
     $pid = fork;
     if ($pid) {
         local $SIG{CHLD};
@@ -1211,6 +1210,7 @@ eval {
         alarm 0;
         $exitcode = $wstat == -1 ? -1 : $?;
     } elsif ( $pid == 0 ) {
+        setpgrp(0,0); # new process group
         exec "%s";
     }
     else {
@@ -1218,10 +1218,9 @@ eval {
     }
 };
 if ($pid && $@ =~ /Timeout/){
-    local $SIG{TERM} = 'IGNORE'; # ignore TERM
-    kill 'TERM' => 0; # and send to our whole process group
+    kill -9 => $pid; # and send to our child's whole process group
     waitpid $pid, 0;
-    $exitcode = 15; # force result to look like SIGTERM
+    $exitcode = 9; # force result to look like SIGKILL
 }
 elsif ($@) {
     die $@;
@@ -1355,7 +1354,7 @@ sub _toolchain_report {
 #
 #--------------------------------------------------------------------------#
 
-my $version_finder = $INC{'CPAN/Reporter/PrereqCheck.pm'};
+my $version_finder = quotemeta($INC{'CPAN/Reporter/PrereqCheck.pm'});
 
 sub _version_finder {
     my %prereqs = @_;
