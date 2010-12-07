@@ -1,23 +1,33 @@
-package CPAN::Reporter;
+#
+# This file is part of CPAN-Reporter
+#
+# This software is Copyright (c) 2006 by David Golden.
+#
+# This is free software, licensed under:
+#
+#   The Apache License, Version 2.0, January 2004
+#
 use strict;
-use vars qw/$VERSION/;
-$VERSION = '1.18_05';
-$VERSION = eval $VERSION; ## no critic
+package CPAN::Reporter;
+BEGIN {
+  $CPAN::Reporter::VERSION = '1.18_06';
+}
+# ABSTRACT: Adds CPAN Testers reporting to CPAN.pm
 
 use Config;
-use CPAN ();
+use CPAN 1.9301 ();
 use CPAN::Version ();
 use File::Basename qw/basename dirname/;
 use File::Find ();
 use File::HomeDir ();
 use File::Path qw/mkpath rmtree/;
-use File::Spec ();
-use File::Temp qw/tempdir/;
+use File::Spec 3.19 ();
+use File::Temp 0.16 qw/tempdir/;
 use IO::File ();
 use Parse::CPAN::Meta ();
 use Probe::Perl ();
-use Tee qw/tee/;
-use Test::Reporter ();
+use Tee 0.13 qw/tee/;
+use Test::Reporter 1.54 ();
 use CPAN::Reporter::Config ();
 use CPAN::Reporter::History ();
 use CPAN::Reporter::PrereqCheck ();
@@ -29,7 +39,7 @@ use constant MAX_OUTPUT_LENGTH => 1_000_000;
 # so that PERL5OPT=-MDevel::Autoflush is found by any perl
 #--------------------------------------------------------------------------#
 
-require Devel::Autoflush;
+use Devel::Autoflush 0.04 ();
 # directory fixture
 my $Autoflush_Lib = tempdir(
   "CPAN-Reporter-lib-XXXX", TMPDIR => 1, CLEANUP => 1
@@ -536,26 +546,41 @@ sub _downgrade_known_causes {
     # look for perl version error messages from various programs
     # "Error evaling..." type errors happen on Perl < 5.006 when modules
     # define their version with "our $VERSION = ..."
-    my $version_error;
+    my ($harness_error, $version_error, $unsupported) ;
     for my $line ( @$output ) {
-        if( $line =~ /Perl .*? required.*?--this is only/ims ||
-            $line =~ /ERROR: perl: Version .*? is installed, but we need version/ims ||
-            $line =~ /ERROR: perl \(.*?\) is installed, but we need version/ims ||
-            $line =~ /Error evaling version line 'BEGIN/ims ||
-            $line =~ /Could not eval '/ims
-        ) {
-            $version_error++;
-            last;
-        }
+      if ( $result->{phase} eq 'test'
+        && $line =~ m{open3: IO::Pipe: Can't spawn.*?TAP/Parser/Iterator/Process.pm}
+      ) {
+        $harness_error++;
+        last;
+      }
+      if( $line =~ /Perl .*? required.*?--this is only/ims ||
+        $line =~ /ERROR: perl: Version .*? is installed, but we need version/ims ||
+        $line =~ /ERROR: perl \(.*?\) is installed, but we need version/ims ||
+        $line =~ /Error evaling version line 'BEGIN/ims ||
+        $line =~ /Could not eval '/ims
+      ) {
+        $version_error++;
+        last;
+      }
+      if ( $line =~ /No support for OS|OS unsupported/ims ) {
+        $unsupported++;
+        last;
+      }
     }
 
+    # if the test harness had an error, discard the report
+    if ( $harness_error ) {
+      $grade = 'discard';
+      $msg = 'Test harness failure';
+    }
     # check for explicit version error or just a perl version prerequisite
-    if ( $version_error || $result->{prereq_pm} =~ m{^\s+!\s+perl\s}ims ) {
+    elsif ( $version_error || $result->{prereq_pm} =~ m{^\s+!\s+perl\s}ims ) {
         $grade = 'na';
         $msg = 'Perl version too low';
     }
     # check again for unsupported OS in case we took 'fail' from exit value
-    elsif ( grep { /No support for OS|OS unsupported/ims } @{$output} ) {
+    elsif ( $unsupported  ) {
         $grade = 'na';
         $msg = 'This platform is not supported';
     }
@@ -1391,31 +1416,27 @@ sub _version_finder {
 
 1; #this line is important and will help the module return a true value
 
-__END__
 
-#--------------------------------------------------------------------------#
-# pod documentation
-#--------------------------------------------------------------------------#
 
-=begin wikidoc
+=pod
 
-= NAME
+=head1 NAME
 
 CPAN::Reporter - Adds CPAN Testers reporting to CPAN.pm
 
-= VERSION
+=head1 VERSION
 
-This documentation describes version %%VERSION%%.
+version 1.18_06
 
-= SYNOPSIS
+=head1 SYNOPSIS
 
 From the CPAN shell:
 
- cpan> install CPAN::Reporter
- cpan> reload cpan
- cpan> o conf init test_report
+  cpan> install CPAN::Reporter
+  cpan> reload cpan
+  cpan> o conf init test_report
 
-= DESCRIPTION
+=head1 DESCRIPTION
 
 The CPAN Testers project captures and analyses detailed results from building
 and testing CPAN distributions on multiple operating systems and multiple
@@ -1428,21 +1449,28 @@ they test or install.  CPAN::Reporter is an add-on for the CPAN.pm module to
 send the results of building and testing modules to the CPAN Testers project.
 Full support for CPAN::Reporter is available in CPAN.pm as of version 1.92.
 
-= GETTING STARTED
+=for Pod::Coverage configure
+grade_PL
+grade_make
+grade_test
+record_command
+test
 
-== Installation
+=head1 GETTING STARTED
+
+=head2 Installation
 
 The first step in using CPAN::Reporter is to install it using whatever
 version of CPAN.pm is already installed.  CPAN.pm will be upgraded as
 a dependency if necessary.
 
- cpan> install CPAN::Reporter
+  cpan> install CPAN::Reporter
 
 If CPAN.pm was upgraded, it needs to be reloaded.
 
- cpan> reload cpan
+  cpan> reload cpan
 
-== Configuration
+=head2 Configuration
 
 If upgrading from a very old version of CPAN.pm, users may be prompted to renew
 their configuration settings, including the 'test_report' option to enable
@@ -1452,13 +1480,13 @@ If not prompted automatically, users should manually initialize CPAN::Reporter
 support.  After enabling CPAN::Reporter, CPAN.pm will automatically continue
 with interactive configuration of CPAN::Reporter options.
 
- cpan> o conf init test_report
+  cpan> o conf init test_report
 
 Users will need to enter an email address in one of the following formats:
 
- johndoe@example.com
- John Doe <johndoe@example.com>
- "John Q. Public" <johnqpublic@example.com>
+  johndoe@example.com
+  John Doe <johndoe@example.com>
+  "John Q. Public" <johnqpublic@example.com>
 
 Users will also be prompted to enter the name of an outbound email server.  It
 is recommended to use an email server provided by the user's ISP or company.
@@ -1470,11 +1498,11 @@ for other configuration options.
 After completing interactive configuration, be sure to commit (save) the CPAN
 configuration changes.
 
- cpan> o conf commit
+  cpan> o conf commit
 
-See [CPAN::Reporter::Config] for advanced configuration settings.
+See L<CPAN::Reporter::Config> for advanced configuration settings.
 
-== Using CPAN::Reporter
+=head2 Using CPAN::Reporter
 
 Once CPAN::Reporter is enabled and configured, test or install modules with
 CPAN.pm as usual.
@@ -1482,90 +1510,121 @@ CPAN.pm as usual.
 For example, to force CPAN to repeat tests for CPAN::Reporter to see how it
 works:
 
- cpan> force test CPAN::Reporter
+  cpan> force test CPAN::Reporter
 
 When distribution tests fail, users will be prompted to edit the report to add
 addition information.
 
-= UNDERSTANDING TEST GRADES
+=head1 UNDERSTANDING TEST GRADES
 
 CPAN::Reporter will assign one of the following grades to the report:
 
-* {pass} -- distribution built and tested correctly
-* {fail} --  distribution failed to test correctly
-* {unknown} -- distribution failed to build, had no test suite or outcome was
+=over
+
+=item *
+
+C<<< pass >>> -- distribution built and tested correctly
+
+=item *
+
+C<<< fail >>> --  distribution failed to test correctly
+
+=item *
+
+C<<< unknown >>> -- distribution failed to build, had no test suite or outcome was
 inconclusive
-* {na} --- distribution is not applicable to this platform and/or
+
+=item *
+
+C<<< na >>> --- distribution is not applicable to this platform andE<sol>or
 version of Perl
+
+=back
 
 In returning results of the test suite to CPAN.pm, "pass" and "unknown" are
 considered successful attempts to "make test" or "Build test" and will not
 prevent installation.  "fail" and "na" are considered to be failures and
 CPAN.pm will not install unless forced.
 
-An error from Makefile.PL/Build.PL or make/Build will also be graded as
+An error from Makefile.PLE<sol>Build.PL or makeE<sol>Build will also be graded as
 "unknown" and a failure will be signaled to CPAN.pm.
 
-If prerequisites specified in {Makefile.PL} or {Build.PL} are not available,
+If prerequisites specified in C<<< Makefile.PL >>> or C<<< Build.PL >>> are not available,
 no report will be generated and a failure will be signaled to CPAN.pm.
 
-= PRIVACY WARNING
+=head1 PRIVACY WARNING
 
 CPAN::Reporter includes information in the test report about environment
 variables and special Perl variables that could be affecting test results in
 order to help module authors interpret the results of the tests.  This includes
-information about paths, terminal, locale, user/group ID, installed toolchain
+information about paths, terminal, locale, userE<sol>group ID, installed toolchain
 modules (e.g. ExtUtils::MakeMaker) and so on.
 
 These have been intentionally limited to items that should not cause harmful
-personal information to be revealed -- it does ~not~ include your entire
+personal information to be revealed -- it does I<not> include your entire
 environment.  Nevertheless, please do not use CPAN::Reporter if you are
 concerned about the disclosure of this information as part of your test report.
 
 Users wishing to review this information may choose to edit the report
 prior to sending it.
 
-= BUGS
+=head1 BUGS
 
 Please report any bugs or feature using the CPAN Request Tracker.
 Bugs can be submitted through the web interface at
-[http://rt.cpan.org/Dist/Display.html?Queue=CPAN-Reporter]
+L<http://rt.cpan.org/Dist/Display.html?Queue=CPAN-Reporter>
 
 When submitting a bug or request, please include a test-file or a patch to an
 existing test-file that illustrates the bug or desired feature.
 
-= SEE ALSO
+=head1 SEE ALSO
 
 Information about CPAN::Testers:
 
-* [CPAN::Testers] -- overview of CPAN Testers architecture stack
-* [http://www.cpantesters.org] -- project home with all reports
-* [http://wiki.cpantesters.org] -- documentation and wiki
+=over
+
+=item *
+
+L<CPAN::Testers> -- overview of CPAN Testers architecture stack
+
+=item *
+
+L<http://www.cpantesters.org> -- project home with all reports
+
+=item *
+
+L<http://wiki.cpantesters.org> -- documentation and wiki
+
+=back
 
 Additional Documentation:
 
-* [CPAN::Reporter::Config] -- advanced configuration settings
-* [CPAN::Reporter::FAQ] -- hints and tips
+=over
 
-= AUTHOR
+=item *
 
-David A. Golden (DAGOLDEN)
+L<CPAN::Reporter::Config> -- advanced configuration settings
 
-= COPYRIGHT AND LICENSE
+=item *
 
-Copyright (c) 2006, 2007, 2008 by David A. Golden
+L<CPAN::Reporter::FAQ> -- hints and tips
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-[http://www.apache.org/licenses/LICENSE-2.0]
+=back
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+=head1 AUTHOR
 
-=end wikidoc
+David Golden <dagolden@cpan.org>
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is Copyright (c) 2006 by David Golden.
+
+This is free software, licensed under:
+
+  The Apache License, Version 2.0, January 2004
 
 =cut
+
+
+__END__
+

@@ -1,3 +1,4 @@
+#!perl
 #
 # This file is part of CPAN-Reporter
 #
@@ -7,6 +8,10 @@
 #
 #   The Apache License, Version 2.0, January 2004
 #
-package Bogus::NoVersion;
-use strict;
-1;
+
+use Test::More;
+
+eval "use Test::Portability::Files";
+plan skip_all => "Test::Portability::Files required for testing portability"
+  if $@;
+run_tests();

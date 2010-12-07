@@ -1,15 +1,25 @@
-package CPAN::Reporter::Config;
+#
+# This file is part of CPAN-Reporter
+#
+# This software is Copyright (c) 2006 by David Golden.
+#
+# This is free software, licensed under:
+#
+#   The Apache License, Version 2.0, January 2004
+#
 use strict; 
-use vars qw/$VERSION/;
-$VERSION = '1.18_05';
-$VERSION = eval $VERSION; ## no critic
+package CPAN::Reporter::Config;
+BEGIN {
+  $CPAN::Reporter::Config::VERSION = '1.18_06';
+}
+# ABSTRACT: Config file options for CPAN::Reporter
 
-use Config::Tiny ();
-use File::HomeDir (); 
+use Config::Tiny 2.08 ();
+use File::HomeDir 0.58 (); 
 use File::Path (qw/mkpath/);
-use File::Spec ();
+use File::Spec 3.19 ();
 use IO::File ();
-use CPAN (); # for printing warnings
+use CPAN 1.9301 (); # for printing warnings
 
 #--------------------------------------------------------------------------#
 # Back-compatibility checks -- just once per load
@@ -515,39 +525,39 @@ sub _validate_skipfile {
 }
 
 1;
-__END__
 
-=begin wikidoc
 
-= NAME
+=pod
+
+=head1 NAME
 
 CPAN::Reporter::Config - Config file options for CPAN::Reporter
 
-= VERSION
+=head1 VERSION
 
-This documentation refers to version %%VERSION%%
+version 1.18_06
 
-= SYNOPSIS
+=head1 SYNOPSIS
 
 From the CPAN shell:
 
- cpan> o conf init test_report
+  cpan> o conf init test_report
 
-= DESCRIPTION
+=head1 DESCRIPTION
 
 Default options for CPAN::Reporter are read from a configuration file 
-{.cpanreporter/config.ini} in the user's home directory.
+C<<< .cpanreporter/config.ini >>> in the user's home directory.
 
 The configuration file is in "ini" format, with the option name and value
 separated by an "=" sign
 
-  email_from = "John Doe" <johndoe@nowhere.org>
-  edit_report = no
+   email_from = "John Doe" <johndoe@nowhere.org>
+   edit_report = no
 
 Interactive configuration of email address, mail server and common
 action prompts may be repeated at any time from the CPAN shell.  
 
- cpan> o conf init test_report
+  cpan> o conf init test_report
 
 If a configuration file does not exist, it will be created the first
 time interactive configuration is performed.
@@ -555,21 +565,27 @@ time interactive configuration is performed.
 Subsequent interactive configuration will also include any advanced
 options that have been added manually to the configuration file.
 
-= INTERACTIVE CONFIGURATION OPTIONS
+=head1 INTERACTIVE CONFIGURATION OPTIONS
 
-== Email Address (required)
+=head2 Email Address (required)
 
 CPAN::Reporter requires users to provide an email address that will be used
 in the "From" header of the email to cpan-testers@perl.org.
 
-* {email_from = <email address>} -- email address of the user sending the
+=over
+
+=item *
+
+C<<< email_from = <email address> >>> -- email address of the user sending the
 test report; it should be a valid address format, e.g.:
 
- user@domain
- John Doe <user@domain>
- "John Q. Public" <user@domain>
+=back
 
-Because {cpan-testers} uses a mailing list to collect test reports, it is
+  user@domain
+  John Doe <user@domain>
+  "John Q. Public" <user@domain>
+
+Because C<<< cpan-testers >>> uses a mailing list to collect test reports, it is
 helpful if the email address provided is subscribed to the list.  Otherwise,
 test reports will be held until manually reviewed and approved.  
 
@@ -577,7 +593,7 @@ Subscribing an account to the cpan-testers list is as easy as sending a blank
 email to cpan-testers-subscribe@perl.org and replying to the confirmation
 email.
 
-== Mail Server
+=head2 Mail Server
 
 By default, Test::Reporter attempts to send mail directly to perl.org mail 
 servers.  This may fail if a user's computer is behind a network firewall 
@@ -585,14 +601,20 @@ that blocks outbound email.  In this case, the following option should
 be set to the outbound mail server (i.e., SMTP server) as provided by
 the user's Internet service provider (ISP):
 
-* {smtp_server = <server list>} -- one or more alternate outbound mail servers
+=over
+
+=item *
+
+C<<< smtp_server = <server list> >>> -- one or more alternate outbound mail servers
 if the default perl.org mail servers cannot be reached; multiple servers may be
 given, separated with a space (none by default)
 
-In at least one reported case, an ISP's outbound mail servers also refused 
-to forward mail unless the {email_from} was from the ISP-given email address. 
+=back
 
-== Action Prompts
+In at least one reported case, an ISP's outbound mail servers also refused 
+to forward mail unless the C<<< email_from >>> was from the ISP-given email address. 
+
+=head2 Action Prompts
 
 Several steps in the generation of a test report are optional.  Configuration
 options control whether an action should be taken automatically or whether
@@ -601,166 +623,247 @@ to take may be different for each report grade.
 
 Valid actions, and their associated meaning, are as follows:
 
-* {yes} -- automatic yes
-* {no} -- automatic no
-* {ask/no} or just {ask} -- ask each time, but default to no
-* {ask/yes} -- ask each time, but default to yes
+=over
+
+=item *
+
+C<<< yes >>> -- automatic yes
+
+=item *
+
+C<<< no >>> -- automatic no
+
+=item *
+
+C<<< ask/no >>> or just C<<< ask >>> -- ask each time, but default to no
+
+=item *
+
+C<<< ask/yes >>> -- ask each time, but default to yes
+
+=back
 
 For "ask" prompts, the default will be used if return is pressed immediately at
-the prompt or if the {PERL_MM_USE_DEFAULT} environment variable is set to a
+the prompt or if the C<<< PERL_MM_USE_DEFAULT >>> environment variable is set to a
 true value.
 
 Action prompt options take one or more space-separated "grade:action" pairs,
 which are processed left to right.
 
- edit_report = fail:ask/yes pass:no
- 
+  edit_report = fail:ask/yes pass:no
+
 An action by itself is taken as a default to be used for any grade which does
 not have a grade-specific action.  A default action may also be set by using
 the word "default" in place of a grade.  
 
- edit_report = ask/no
- edit_report = default:ask/no
- 
+  edit_report = ask/no
+  edit_report = default:ask/no
+
 A grade by itself is taken to have the action "yes" for that grade.
 
- edit_report = default:no fail
+  edit_report = default:no fail
 
 Multiple grades may be specified together by separating them with a slash.
 
- edit_report = pass:no fail/na/unknown:ask/yes
+  edit_report = pass:no fail/na/unknown:ask/yes
 
 The action prompt options included in interactive configuration are:
 
-* {edit_report = <grade:action> ...} -- edit the test report before sending? 
-(default:ask/no pass/na:no)
-* {send_report = <grade:action> ...} -- should test reports be sent at all?
-(default:ask/yes pass/na:yes)
+=over
 
-Note that if {send_report} is set to "no", CPAN::Reporter will still go through
+=item *
+
+C<<< edit_report = <grade:action> ... >>> -- edit the test report before sending? 
+(default:askE<sol>no passE<sol>na:no)
+
+=item *
+
+C<<< send_report = <grade:action> ... >>> -- should test reports be sent at all?
+(default:askE<sol>yes passE<sol>na:yes)
+
+=back
+
+Note that if C<<< send_report >>> is set to "no", CPAN::Reporter will still go through
 the motions of preparing a report, but will discard it rather than send it.
 
 A better way to disable CPAN::Reporter temporarily is with the CPAN option
-{test_report}:
+C<<< test_report >>>:
 
- cpan> o conf test_report 0
+  cpan> o conf test_report 0
 
-= ADVANCED CONFIGURATION OPTIONS
+=head1 ADVANCED CONFIGURATION OPTIONS
 
 These additional options are only necessary in special cases, for example if
 the default editor cannot be found or if reports shouldn't be sent in 
 certain situations or for automated testing, and so on.
 
-* {command_timeout} -- if greater than zero and the CPAN config is
-{inactivity_timeout} is not set, then any commands executed by CPAN::Reporter 
+=over
+
+=item *
+
+C<<< command_timeout >>> -- if greater than zero and the CPAN config is
+C<<< inactivity_timeout >>> is not set, then any commands executed by CPAN::Reporter 
 will be halted after this many seconds; useful for unattended smoke testing 
 to stop after some amount of time; generally, this should be large -- 
 900 seconds or more -- as some distributions' tests take quite a long time to 
-run.  On MSWin32, [Win32::Job] is a needed and trying to kill a processes may 
+run.  On MSWin32, L<Win32::Job> is a needed and trying to kill a processes may 
 actually deadlock in some situations -- so use at your own risk.
-* {editor = <editor>} -- editor to use to edit the test report; if not set,
-Test::Reporter will use environment variables {VISUAL}, {EDITOR} or {EDIT}
+
+=item *
+
+C<<< editor = <editor> >>> -- editor to use to edit the test report; if not set,
+Test::Reporter will use environment variables C<<< VISUAL >>>, C<<< EDITOR >>> or C<<< EDIT >>>
 (in that order) to find an editor 
-* {send_duplicates = <grade:action> ...} -- should duplicates of previous 
-reports be sent, regardless of {send_report}? (default:no)
-* {send_PL_report = <grade:action> ...} -- if defined, used in place of 
-{send_report} during the PL phase
-* {send_make_report = <grade:action> ...} -- if defined, used in place of 
-{send_report} during the make phase
-* {send_test_report = <grade:action> ...} -- if defined, used in place of 
-{send_report} during the test phase
-* {send_skipfile = <skipfile>} -- filename containing regular expressions (one
+
+=item *
+
+C<<< send_duplicates = <grade:action> ... >>> -- should duplicates of previous 
+reports be sent, regardless of C<<< send_report >>>? (default:no)
+
+=item *
+
+C<<< send_PL_report = <grade:action> ... >>> -- if defined, used in place of 
+C<<< send_report >>> during the PL phase
+
+=item *
+
+C<<< send_make_report = <grade:action> ... >>> -- if defined, used in place of 
+C<<< send_report >>> during the make phase
+
+=item *
+
+C<<< send_test_report = <grade:action> ... >>> -- if defined, used in place of 
+C<<< send_report >>> during the test phase
+
+=item *
+
+C<<< send_skipfile = <skipfile> >>> -- filename containing regular expressions (one
 per line) to match against the distribution ID (e.g. 
-'AUTHOR/Dist-Name-0.01.tar.gz'); the report will not be sent if a match is 
+'AUTHORE<sol>Dist-Name-0.01.tar.gz'); the report will not be sent if a match is 
 found; non-absolute filename must be in the .cpanreporter config directory;
-* {transport = <transport> [transport args]} -- if defined, passed to the 
-{transport()} method of [Test::Reporter].  See below for 
+
+=item *
+
+C<<< transport = <transport> [transport args] >>> -- if defined, passed to the 
+C<<< transport() >>> method of L<Test::Reporter>.  See below for 
 more details.  (CPAN::Reporter uses 'Net::SMTP' for this by default.)
+
+=back
 
 If these options are manually added to the configuration file, they will
 be included (and preserved) in subsequent interactive configuration.
 
-== Skipfile regular expressions
+=head2 Skipfile regular expressions
 
 Skip files are expected to have one regular expression per line and will be 
 matched against the distribution ID, composed of the author's CPAN ID and the 
 distribution tarball name.
 
-    DAGOLDEN/CPAN-Reporter-1.00.tar.gz
+     DAGOLDEN/CPAN-Reporter-1.00.tar.gz
 
 Lines that begin with a sharp (#) are considered comments and will not be
 matched.  All regular expressionss will be matched case insensitive and will
 not be anchored unless you provide one. 
 
-As the format of a distribution ID is "AUTHOR/tarball", anchoring at the 
-start of the line with a caret (^) will match the author and with a slash (/)
+As the format of a distribution ID is "AUTHORE<sol>tarball", anchoring at the 
+start of the line with a caret (^) will match the author and with a slash (E<sol>)
 will match the distribution.  
 
-    # any distributions by JOHNDOE
-    ^JOHNDOE
-    # any distributions starting with Win32
-    /Win32
-    # a particular very specific distribution
-    ^JOHNDOE/Foo-Bar-3.14
+     # any distributions by JOHNDOE
+     ^JOHNDOE
+     # any distributions starting with Win32
+     /Win32
+     # a particular very specific distribution
+     ^JOHNDOE/Foo-Bar-3.14
 
-== Transport options
+=head2 Transport options
 
-The [Test::Reporter] 1.39_XX development series added support for multiple
-transport modules, e.g. [Test::Reporter::Transport::Net::SMTP::TLS] or
-[Test::Reporter::Transport::HTTPGateway].  To use them with CPAN::Reporter,
+The L<Test::Reporter> 1.39_XX development series added support for multiple
+transport modules, e.g. L<Test::Reporter::Transport::Net::SMTP::TLS> or
+L<Test::Reporter::Transport::HTTPGateway>.  To use them with CPAN::Reporter,
 set the 'transport' config option to the name of the transport module 
 (without the 'Test::Reporter::Transport' prefix) and any required arguments,
 separated by white space. For example:
 
-  transport=Net::SMTP Port 587
-  transport=Net::SMTP::TLS User jdoe@example.com Password 12345
-  transport=HTTPGateway http://example.com/cpantesters.cgi MyKey
-  transport=File ~/saved-reports-dir
+   transport=Net::SMTP Port 587
+   transport=Net::SMTP::TLS User jdoe@example.com Password 12345
+   transport=HTTPGateway http://example.com/cpantesters.cgi MyKey
+   transport=File ~/saved-reports-dir
 
 The transport module may be any Test::Reporter::Transport installed on your
 system.  As of Test::Reporter 1.39_05, transports included 'Net::SMTP', 
 'Net::SMTP::TLS', 'Mail::Send',  'HTTPGateway' and 'File'.
 
-= CONFIGURATION OPTIONS FOR DEBUGGING
+=head1 CONFIGURATION OPTIONS FOR DEBUGGING
 
 These options are useful for debugging only:
 
-* {debug = <boolean>} -- turns debugging on/off
-* {email_to = <email address>} -- alternate destination for reports instead of
-{cpan-testers@perl.org}; used for testing
+=over
 
-= ENVIRONMENT
+=item *
+
+C<<< debug = <boolean> >>> -- turns debugging onE<sol>off
+
+=item *
+
+C<<< email_to = <email address> >>> -- alternate destination for reports instead of
+C<<< cpan-testers@perl.org >>>; used for testing
+
+=back
+
+=head1 ENVIRONMENT
 
 The following environment variables may be set to alter the default locations 
 for CPAN::Reporter files:
 
-* {PERL_CPAN_REPORTER_DIR} -- if set, this directory is used in place of
+=over
+
+=item *
+
+C<<< PERL_CPAN_REPORTER_DIR >>> -- if set, this directory is used in place of
 the default .cpanreporter directory; this will affect not only the location
-of the default {config.ini}, but also the location of the 
-[CPAN::Reporter::History] database and any other files that live in that
+of the default C<<< config.ini >>>, but also the location of the 
+L<CPAN::Reporter::History> database and any other files that live in that
 directory
-* {PERL_CPAN_REPORTER_CONFIG} -- if set, this file is used in place of 
-the default {config.ini} file; it may be in any directory, regardless of the 
+
+=item *
+
+C<<< PERL_CPAN_REPORTER_CONFIG >>> -- if set, this file is used in place of 
+the default C<<< config.ini >>> file; it may be in any directory, regardless of the 
 choice of configuration directory
 
-= SEE ALSO
+=back
 
-* [CPAN::Reporter]
-* [CPAN::Reporter::History]
-* [CPAN::Reporter::FAQ]
+=head1 SEE ALSO
 
-= AUTHOR
+=over
+
+=item *
+
+L<CPAN::Reporter>
+
+=item *
+
+L<CPAN::Reporter::History>
+
+=item *
+
+L<CPAN::Reporter::FAQ>
+
+=back
+
+=head1 AUTHOR
 
 David A. Golden (DAGOLDEN)
 
-= COPYRIGHT AND LICENSE
+=head1 COPYRIGHT AND LICENSE
 
 Copyright (c) 2006, 2007, 2008 by David A. Golden
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at 
-[http://www.apache.org/licenses/LICENSE-2.0]
+L<http://www.apache.org/licenses/LICENSE-2.0>
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -768,6 +871,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
+=head1 AUTHOR
 
-=end wikidoc
+David Golden <dagolden@cpan.org>
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is Copyright (c) 2006 by David Golden.
+
+This is free software, licensed under:
+
+  The Apache License, Version 2.0, January 2004
+
+=cut
+
+
+__END__
 

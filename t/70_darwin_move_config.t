@@ -1,4 +1,13 @@
 #!perl
+#
+# This file is part of CPAN-Reporter
+#
+# This software is Copyright (c) 2006 by David Golden.
+#
+# This is free software, licensed under:
+#
+#   The Apache License, Version 2.0, January 2004
+#
 use strict;
 BEGIN{ if (not $] < 5.006) { require warnings; warnings->import } }
 
@@ -45,6 +54,7 @@ BEGIN {
 }
 
 package File::HomeDir;
+our $VERSION = 999;
 sub my_documents { return $old_home };
 sub my_home { return $new_home };
 

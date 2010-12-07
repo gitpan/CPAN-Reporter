@@ -1,4 +1,13 @@
 #!perl
+#
+# This file is part of CPAN-Reporter
+#
+# This software is Copyright (c) 2006 by David Golden.
+#
+# This is free software, licensed under:
+#
+#   The Apache License, Version 2.0, January 2004
+#
 use strict;
 BEGIN{ if (not $] < 5.006) { require warnings; warnings->import } }
 
@@ -60,6 +69,16 @@ my @test_distros = (
         mb_success => 0,
         mb_grade => "discard",
         mb_msg => "Prerequisite version too low",
+    },
+    {
+        name => 't-Harness-Fail',
+        prereq => {},
+        eumm_success => 0,
+        eumm_grade => "discard",
+        eumm_msg => "Test harness failure",
+        mb_success => 0,
+        mb_grade => "discard",
+        mb_msg => "Test harness failure",
     },
 );
 

@@ -1,3 +1,12 @@
+#
+# This file is part of CPAN-Reporter
+#
+# This software is Copyright (c) 2006 by David Golden.
+#
+# This is free software, licensed under:
+#
+#   The Apache License, Version 2.0, January 2004
+#
 package t::MockHomeDir;
 use strict;
 BEGIN{ if (not $] < 5.006) { require warnings; warnings->import } }
@@ -20,6 +29,7 @@ my $home_dir = File::Spec->rel2abs( $temp_home );
 sub home_dir { $home_dir }
 
 package File::HomeDir;
+our $VERSION = 999;
 sub my_documents { return $home_dir };
 sub my_home { return $home_dir };
 sub my_data { return $home_dir };

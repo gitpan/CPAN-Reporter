@@ -1,8 +1,20 @@
-package CPAN::Reporter::History;
+#
+# This file is part of CPAN-Reporter
+#
+# This software is Copyright (c) 2006 by David Golden.
+#
+# This is free software, licensed under:
+#
+#   The Apache License, Version 2.0, January 2004
+#
 use strict; 
-use vars qw/$VERSION @ISA @EXPORT_OK/;
-$VERSION = '1.18_05';
-$VERSION = eval $VERSION; ## no critic
+package CPAN::Reporter::History;
+BEGIN {
+  $CPAN::Reporter::History::VERSION = '1.18_06';
+}
+# ABSTRACT: Read or write a CPAN::Reporter history log
+
+use vars qw/@ISA @EXPORT_OK/;
 
 use Config;
 use Carp;
@@ -304,101 +316,130 @@ sub _split_history {
 }
 
 1;
-__END__
 
-=begin wikidoc
 
-= NAME
+=pod
+
+=head1 NAME
 
 CPAN::Reporter::History - Read or write a CPAN::Reporter history log
 
-= VERSION
+=head1 VERSION
 
-This documentation refers to version %%VERSION%%
+version 1.18_06
 
-= SYNOPSIS
+=head1 SYNOPSIS
 
-    use CPAN::Reporter::History 'have_tested';
-    
-    @results = have_tested( dist => 'Dist-Name-1.23' );
+     use CPAN::Reporter::History 'have_tested';
+ 
+     @results = have_tested( dist => 'Dist-Name-1.23' );
 
-= DESCRIPTION
+=head1 DESCRIPTION
 
 Interface for interacting with the CPAN::Reporter history file.  Most methods
 are private for use only within CPAN::Reporter itself.  However, a public
 function is provided to query the history file for results. 
 
-= USAGE
+=head1 USAGE
 
 The following function is available.  It is not exported by default.
 
-== {have_tested()}
+=head2 C<<< have_tested() >>>
 
-    # all reports for Foo-Bar-1.23
-    @results = have_tested( dist => 'Foo-Bar-1.23' );
-
-    # all NA reports
-    @results = have_tested( grade => 'NA' );
-
-    # all reports on the current Perl/platform
-    @results = have_tested();
+     # all reports for Foo-Bar-1.23
+     @results = have_tested( dist => 'Foo-Bar-1.23' );
+ 
+     # all NA reports
+     @results = have_tested( grade => 'NA' );
+ 
+     # all reports on the current Perl/platform
+     @results = have_tested();
 
 Searches the CPAN::Reporter history file for records exactly matching search
 criteria, given as pairs of field-names and desired values.  
 
 Ordinary search criteria include:
 
-* {dist} -- the distribution tarball name without any filename suffix; from 
-a {CPAN::Distribution} object, this is provided by the {base_id} method.
-* {phase} -- phase the report was generated during: either 'PL', 
+=over
+
+=item *
+
+C<<< dist >>> -- the distribution tarball name without any filename suffix; from 
+a C<<< CPAN::Distribution >>> object, this is provided by the C<<< base_id >>> method.
+
+=item *
+
+C<<< phase >>> -- phase the report was generated during: either 'PL', 
 'make' or 'test'
-* {grade} -- CPAN Testers grade: 'PASS', 'FAIL', 'NA' or'UNKNOWN'; Also may
+
+=item *
+
+C<<< grade >>> -- CPAN Testers grade: 'PASS', 'FAIL', 'NA' or'UNKNOWN'; Also may
 be 'DISCARD' for any failing reports not sent due to missing prerequisites
+
+=back
 
 Without additional criteria, a search will be limited to the current
 version of Perl and the current architecture and OS version.  
 Additional criteria may be specified explicitly or, by specifying the empty 
-string, {q{}}, will match that field for ~any~ record.
+string, C<<< q{} >>>, will match that field for I<any> record.
 
-    # all reports for Foo-Bar-1.23 on any version of perl 
-    # on the current architecture and OS version
-    @results = have_tested( dist => 'Foo-Bar-1.23', perl => q{} );
+     # all reports for Foo-Bar-1.23 on any version of perl 
+     # on the current architecture and OS version
+     @results = have_tested( dist => 'Foo-Bar-1.23', perl => q{} );
 
 These additional criteria include:
 
-* {perl} -- perl version and possible patchlevel; this will be
+=over
+
+=item *
+
+C<<< perl >>> -- perl version and possible patchlevel; this will be
 dotted decimal (5.6.2) starting with version 5.6, or will be numeric style as
-given by {$]} for older versions; if a patchlevel exists, it must be specified
+given by C<<< $] >>> for older versions; if a patchlevel exists, it must be specified
 similar to "5.11.0 patch 12345"
-* {archname} -- platform architecture name as given by $Config{archname}
-* {osvers} -- operating system version as given by $Config{osvers}
+
+=item *
+
+C<<< archname >>> -- platform architecture name as given by $Config{archname}
+
+=item *
+
+C<<< osvers >>> -- operating system version as given by $Config{osvers}
+
+=back
 
 The function returns an array of hashes representing each test result, with
 all of the fields listed above.
 
-= SEE ALSO
+=head1 SEE ALSO
 
-* [CPAN::Reporter]
-* [CPAN::Reporter::FAQ]
+=over
 
-= AUTHOR
+=item *
 
-David A. Golden (DAGOLDEN)
+L<CPAN::Reporter>
 
-= COPYRIGHT AND LICENSE
+=item *
 
-Copyright (c) 2006, 2007, 2008 by David A. Golden
+L<CPAN::Reporter::FAQ>
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at 
-[http://www.apache.org/licenses/LICENSE-2.0]
+=back
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+=head1 AUTHOR
 
-=end wikidoc
+David Golden <dagolden@cpan.org>
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is Copyright (c) 2006 by David Golden.
+
+This is free software, licensed under:
+
+  The Apache License, Version 2.0, January 2004
+
+=cut
+
+
+__END__
 

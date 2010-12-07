@@ -1,0 +1,109 @@
+{
+   "abstract" : "Adds CPAN Testers reporting to CPAN.pm",
+   "author" : [
+      "David Golden <dagolden@cpan.org>"
+   ],
+   "dynamic_config" : 0,
+   "generated_by" : "Dist::Zilla version 4.102341, CPAN::Meta::Converter version 2.102400",
+   "license" : [
+      "apache_2_0"
+   ],
+   "meta-spec" : {
+      "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
+      "version" : "2"
+   },
+   "name" : "CPAN-Reporter",
+   "no_index" : {
+      "directory" : [
+         "t",
+         "xt",
+         "examples",
+         "corpus"
+      ],
+      "package" : [
+         "DB"
+      ]
+   },
+   "prereqs" : {
+      "configure" : {
+         "requires" : {
+            "ExtUtils::MakeMaker" : "6.31"
+         }
+      },
+      "runtime" : {
+         "requires" : {
+            "CPAN" : "1.9301",
+            "CPAN::Version" : 0,
+            "Carp" : 0,
+            "Config" : 0,
+            "Config::Tiny" : "2.08",
+            "Devel::Autoflush" : "0.04",
+            "Exporter" : 0,
+            "ExtUtils::MakeMaker" : "6.36",
+            "Fcntl" : 0,
+            "File::Basename" : 0,
+            "File::Find" : 0,
+            "File::HomeDir" : "0.58",
+            "File::Path" : 0,
+            "File::Spec" : "3.19",
+            "File::Temp" : "0.16",
+            "IO::File" : 0,
+            "Parse::CPAN::Meta" : 0,
+            "Probe::Perl" : 0,
+            "Tee" : "0.13",
+            "Test::Reporter" : "1.54",
+            "constant" : 0,
+            "perl" : "5.006",
+            "vars" : 0
+         }
+      },
+      "test" : {
+         "requires" : {
+            "Archive::Tar" : "1.54",
+            "File::Copy::Recursive" : "0.35",
+            "File::Spec::Functions" : 0,
+            "File::pushd" : "0.32",
+            "IO::CaptureOutput" : "1.03",
+            "Test::Harness" : 0,
+            "Test::More" : "0.62"
+         }
+      }
+   },
+   "provides" : {
+      "CPAN::Reporter" : {
+         "file" : "lib/CPAN/Reporter.pm",
+         "version" : "1.18_06"
+      },
+      "CPAN::Reporter::API" : {
+         "file" : "lib/CPAN/Reporter/API.pm",
+         "version" : "1.18_06"
+      },
+      "CPAN::Reporter::Config" : {
+         "file" : "lib/CPAN/Reporter/Config.pm",
+         "version" : "1.18_06"
+      },
+      "CPAN::Reporter::FAQ" : {
+         "file" : "lib/CPAN/Reporter/FAQ.pm",
+         "version" : "1.18_06"
+      },
+      "CPAN::Reporter::History" : {
+         "file" : "lib/CPAN/Reporter/History.pm",
+         "version" : "1.18_06"
+      },
+      "CPAN::Reporter::PrereqCheck" : {
+         "file" : "lib/CPAN/Reporter/PrereqCheck.pm",
+         "version" : "1.18_06"
+      }
+   },
+   "release_status" : "testing",
+   "resources" : {
+      "homepage" : "http://github.com/dagolden/cpan-reporter/tree",
+      "repository" : {
+         "type" : "git",
+         "url" : "git://github.com/dagolden/cpan-reporter.git",
+         "web" : "http://github.com/dagolden/cpan-reporter/tree"
+      }
+   },
+   "version" : "1.18_06"
+}
+
