@@ -10,7 +10,7 @@
 use strict;
 package CPAN::Reporter::PrereqCheck;
 BEGIN {
-  $CPAN::Reporter::PrereqCheck::VERSION = '1.18_06';
+  $CPAN::Reporter::PrereqCheck::VERSION = '1.1900';
 }
 # ABSTRACT: Modulino for prerequisite tests
 
@@ -133,7 +133,7 @@ CPAN::Reporter::PrereqCheck - Modulino for prerequisite tests
 
 =head1 VERSION
 
-version 1.18_06
+version 1.1900
 
 =head1 SYNOPSIS
 

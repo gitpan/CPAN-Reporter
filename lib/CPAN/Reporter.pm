@@ -10,7 +10,7 @@
 use strict;
 package CPAN::Reporter;
 BEGIN {
-  $CPAN::Reporter::VERSION = '1.18_06';
+  $CPAN::Reporter::VERSION = '1.1900';
 }
 # ABSTRACT: Adds CPAN Testers reporting to CPAN.pm
 
@@ -1426,7 +1426,7 @@ CPAN::Reporter - Adds CPAN Testers reporting to CPAN.pm
 
 =head1 VERSION
 
-version 1.18_06
+version 1.1900
 
 =head1 SYNOPSIS
 

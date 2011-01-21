@@ -10,7 +10,7 @@
 use strict; 
 package CPAN::Reporter::Config;
 BEGIN {
-  $CPAN::Reporter::Config::VERSION = '1.18_06';
+  $CPAN::Reporter::Config::VERSION = '1.1900';
 }
 # ABSTRACT: Config file options for CPAN::Reporter
 
@@ -535,7 +535,7 @@ CPAN::Reporter::Config - Config file options for CPAN::Reporter
 
 =head1 VERSION
 
-version 1.18_06
+version 1.1900
 
 =head1 SYNOPSIS
 

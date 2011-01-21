@@ -13,7 +13,7 @@ build_requires:
 configure_requires:
   ExtUtils::MakeMaker: 6.31
 dynamic_config: 0
-generated_by: 'Dist::Zilla version 4.102341, CPAN::Meta::Converter version 2.102400'
+generated_by: 'Dist::Zilla version 4.200001, CPAN::Meta::Converter version 2.102400'
 license: apache
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -30,22 +30,22 @@ no_index:
 provides:
   CPAN::Reporter:
     file: lib/CPAN/Reporter.pm
-    version: 1.18_06
+    version: 1.1900
   CPAN::Reporter::API:
     file: lib/CPAN/Reporter/API.pm
-    version: 1.18_06
+    version: 1.1900
   CPAN::Reporter::Config:
     file: lib/CPAN/Reporter/Config.pm
-    version: 1.18_06
+    version: 1.1900
   CPAN::Reporter::FAQ:
     file: lib/CPAN/Reporter/FAQ.pm
-    version: 1.18_06
+    version: 1.1900
   CPAN::Reporter::History:
     file: lib/CPAN/Reporter/History.pm
-    version: 1.18_06
+    version: 1.1900
   CPAN::Reporter::PrereqCheck:
     file: lib/CPAN/Reporter/PrereqCheck.pm
-    version: 1.18_06
+    version: 1.1900
 requires:
   CPAN: 1.9301
   CPAN::Version: 0
@@ -73,4 +73,4 @@ requires:
 resources:
   homepage: http://github.com/dagolden/cpan-reporter/tree
   repository: git://github.com/dagolden/cpan-reporter.git
-version: 1.18_06
+version: 1.1900
