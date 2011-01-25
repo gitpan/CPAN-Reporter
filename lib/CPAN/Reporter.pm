@@ -10,11 +10,12 @@
 use strict;
 package CPAN::Reporter;
 BEGIN {
-  $CPAN::Reporter::VERSION = '1.1900';
+  $CPAN::Reporter::VERSION = '1.1901';
 }
 # ABSTRACT: Adds CPAN Testers reporting to CPAN.pm
 
 use Config;
+use Capture::Tiny 'capture';
 use CPAN 1.9301 ();
 use CPAN::Version ();
 use File::Basename qw/basename dirname/;
@@ -1379,7 +1380,7 @@ sub _toolchain_report {
 #
 #--------------------------------------------------------------------------#
 
-my $version_finder = quotemeta($INC{'CPAN/Reporter/PrereqCheck.pm'});
+my $version_finder = $INC{'CPAN/Reporter/PrereqCheck.pm'};
 
 sub _version_finder {
     my %prereqs = @_;
@@ -1393,7 +1394,7 @@ sub _version_finder {
     $fh->print( map { "$_ $prereqs{$_}\n" } keys %prereqs );
     $fh->close;
 
-    my $prereq_result = qx/$perl $version_finder < $prereq_input/;
+    my $prereq_result = capture { system( $perl, $version_finder, '<', $prereq_input ) };
 
     unlink $prereq_input;
 
@@ -1426,7 +1427,7 @@ CPAN::Reporter - Adds CPAN Testers reporting to CPAN.pm
 
 =head1 VERSION
 
-version 1.1900
+version 1.1901
 
 =head1 SYNOPSIS
 

@@ -30,6 +30,7 @@ my %WriteMakefileArgs = (
   'PREREQ_PM' => {
     'CPAN' => '1.9301',
     'CPAN::Version' => '0',
+    'Capture::Tiny' => '0',
     'Carp' => '0',
     'Config' => '0',
     'Config::Tiny' => '2.08',
@@ -51,7 +52,7 @@ my %WriteMakefileArgs = (
     'constant' => '0',
     'vars' => '0'
   },
-  'VERSION' => '1.1900',
+  'VERSION' => '1.1901',
   'test' => {
     'TESTS' => 't/*.t'
   }

@@ -34,6 +34,7 @@
          "requires" : {
             "CPAN" : "1.9301",
             "CPAN::Version" : 0,
+            "Capture::Tiny" : 0,
             "Carp" : 0,
             "Config" : 0,
             "Config::Tiny" : "2.08",
@@ -72,27 +73,27 @@
    "provides" : {
       "CPAN::Reporter" : {
          "file" : "lib/CPAN/Reporter.pm",
-         "version" : "1.1900"
+         "version" : "1.1901"
       },
       "CPAN::Reporter::API" : {
          "file" : "lib/CPAN/Reporter/API.pm",
-         "version" : "1.1900"
+         "version" : "1.1901"
       },
       "CPAN::Reporter::Config" : {
          "file" : "lib/CPAN/Reporter/Config.pm",
-         "version" : "1.1900"
+         "version" : "1.1901"
       },
       "CPAN::Reporter::FAQ" : {
          "file" : "lib/CPAN/Reporter/FAQ.pm",
-         "version" : "1.1900"
+         "version" : "1.1901"
       },
       "CPAN::Reporter::History" : {
          "file" : "lib/CPAN/Reporter/History.pm",
-         "version" : "1.1900"
+         "version" : "1.1901"
       },
       "CPAN::Reporter::PrereqCheck" : {
          "file" : "lib/CPAN/Reporter/PrereqCheck.pm",
-         "version" : "1.1900"
+         "version" : "1.1901"
       }
    },
    "release_status" : "stable",
@@ -104,6 +105,6 @@
          "web" : "http://github.com/dagolden/cpan-reporter/tree"
       }
    },
-   "version" : "1.1900"
+   "version" : "1.1901"
 }
 
