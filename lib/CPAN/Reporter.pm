@@ -10,7 +10,7 @@
 use strict;
 package CPAN::Reporter;
 BEGIN {
-  $CPAN::Reporter::VERSION = '1.1901';
+  $CPAN::Reporter::VERSION = '1.1902';
 }
 # ABSTRACT: Adds CPAN Testers reporting to CPAN.pm
 
@@ -27,7 +27,7 @@ use File::Temp 0.16 qw/tempdir/;
 use IO::File ();
 use Parse::CPAN::Meta ();
 use Probe::Perl ();
-use Tee 0.13 qw/tee/;
+use Tee 0.14 qw/tee/;
 use Test::Reporter 1.54 ();
 use CPAN::Reporter::Config ();
 use CPAN::Reporter::History ();
@@ -1427,7 +1427,7 @@ CPAN::Reporter - Adds CPAN Testers reporting to CPAN.pm
 
 =head1 VERSION
 
-version 1.1901
+version 1.1902
 
 =head1 SYNOPSIS
 

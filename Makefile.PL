@@ -47,12 +47,12 @@ my %WriteMakefileArgs = (
     'IO::File' => '0',
     'Parse::CPAN::Meta' => '0',
     'Probe::Perl' => '0',
-    'Tee' => '0.13',
+    'Tee' => '0.14',
     'Test::Reporter' => '1.54',
     'constant' => '0',
     'vars' => '0'
   },
-  'VERSION' => '1.1901',
+  'VERSION' => '1.1902',
   'test' => {
     'TESTS' => 't/*.t'
   }

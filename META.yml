@@ -30,22 +30,22 @@ no_index:
 provides:
   CPAN::Reporter:
     file: lib/CPAN/Reporter.pm
-    version: 1.1901
+    version: 1.1902
   CPAN::Reporter::API:
     file: lib/CPAN/Reporter/API.pm
-    version: 1.1901
+    version: 1.1902
   CPAN::Reporter::Config:
     file: lib/CPAN/Reporter/Config.pm
-    version: 1.1901
+    version: 1.1902
   CPAN::Reporter::FAQ:
     file: lib/CPAN/Reporter/FAQ.pm
-    version: 1.1901
+    version: 1.1902
   CPAN::Reporter::History:
     file: lib/CPAN/Reporter/History.pm
-    version: 1.1901
+    version: 1.1902
   CPAN::Reporter::PrereqCheck:
     file: lib/CPAN/Reporter/PrereqCheck.pm
-    version: 1.1901
+    version: 1.1902
 requires:
   CPAN: 1.9301
   CPAN::Version: 0
@@ -66,7 +66,7 @@ requires:
   IO::File: 0
   Parse::CPAN::Meta: 0
   Probe::Perl: 0
-  Tee: 0.13
+  Tee: 0.14
   Test::Reporter: 1.54
   constant: 0
   perl: 5.006
@@ -74,4 +74,4 @@ requires:
 resources:
   homepage: http://github.com/dagolden/cpan-reporter/tree
   repository: git://github.com/dagolden/cpan-reporter.git
-version: 1.1901
+version: 1.1902

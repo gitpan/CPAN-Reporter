@@ -10,7 +10,7 @@
 use strict; # make CPANTS happy
 package CPAN::Reporter::FAQ;
 BEGIN {
-  $CPAN::Reporter::FAQ::VERSION = '1.1901';
+  $CPAN::Reporter::FAQ::VERSION = '1.1902';
 }
 # ABSTRACT: Answers and tips for using CPAN::Reporter
 
@@ -27,7 +27,7 @@ CPAN::Reporter::FAQ - Answers and tips for using CPAN::Reporter
 
 =head1 VERSION
 
-version 1.1901
+version 1.1902
 
 =head1 REPORT GRADES
 
