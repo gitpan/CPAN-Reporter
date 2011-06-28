@@ -10,7 +10,7 @@
 use strict; # make CPANTS happy
 package CPAN::Reporter::API;
 BEGIN {
-  $CPAN::Reporter::API::VERSION = '1.1902';
+  $CPAN::Reporter::API::VERSION = '1.19_03';
 }
 # ABSTRACT: Programmer's interface to CPAN::Reporter
 
@@ -27,7 +27,7 @@ CPAN::Reporter::API - Programmer's interface to CPAN::Reporter
 
 =head1 VERSION
 
-version 1.1902
+version 1.19_03
 
 =head1 FUNCTIONS
 

@@ -10,12 +10,12 @@
 use strict;
 package CPAN::Reporter;
 BEGIN {
-  $CPAN::Reporter::VERSION = '1.1902';
+  $CPAN::Reporter::VERSION = '1.19_03';
 }
 # ABSTRACT: Adds CPAN Testers reporting to CPAN.pm
 
 use Config;
-use Capture::Tiny 'capture';
+use Capture::Tiny qw/ capture tee_merged /;
 use CPAN 1.9301 ();
 use CPAN::Version ();
 use File::Basename qw/basename dirname/;
@@ -27,7 +27,6 @@ use File::Temp 0.16 qw/tempdir/;
 use IO::File ();
 use Parse::CPAN::Meta ();
 use Probe::Perl ();
-use Tee 0.14 qw/tee/;
 use Test::Reporter 1.54 ();
 use CPAN::Reporter::Config ();
 use CPAN::Reporter::History ();
@@ -135,8 +134,6 @@ sub record_command {
 
     my ($cmd, $redirect) = _split_redirect($command);
 
-    my $temp_out = _temp_filename( 'CPAN-Reporter-TO-' );
-
     # Teeing a command loses its exit value so we must wrap the command
     # and print the exit code so we can read it off of output
     my $wrap_code;
@@ -164,28 +161,19 @@ HERE
     $wrapper_fh->close;
 
     # tee the command wrapper
-    my $tee_input = Probe::Perl->find_perl_interpreter() .  " $wrapper_name";
-    $tee_input .= " $redirect" if defined $redirect;
+    my @tee_input = ( Probe::Perl->find_perl_interpreter, $wrapper_name );
+    push @tee_input, $redirect if defined $redirect;
+    my $tee_out;
     {
       # ensure autoflush if we can
       local $ENV{PERL5OPT} = _get_perl5opt() if _is_PL($command);
-      tee($tee_input, { stderr => 1 }, $temp_out);
+      $tee_out = tee_merged { system( @tee_input ) };
     }
-
-    # read back the output
-    my $output_fh = IO::File->new($temp_out, "r");
-    if ( !$output_fh ) {
-        $CPAN::Frontend->mywarn(
-            "CPAN::Reporter: couldn't read command results for '$cmd'\n"
-        );
-        return;
-    }
-    my @cmd_output = <$output_fh>;
-    $output_fh->close;
 
     # cleanup
-    unlink $wrapper_name, $temp_out unless $ENV{PERL_CR_NO_CLEANUP};
+    unlink $wrapper_name unless $ENV{PERL_CR_NO_CLEANUP};
 
+    my @cmd_output = split qr{(?<=$/)}, $tee_out;
     if ( ! @cmd_output ) {
         $CPAN::Frontend->mywarn(
             "CPAN::Reporter: didn't capture command results for '$cmd'\n"
@@ -373,10 +361,9 @@ sub _dispatch_report {
 CPAN::Reporter: required 'email_from' option missing an email address, so
 test report will not be sent. See documentation for configuration details.
 
-Even for non-email transports (e.g. Metabase, File or Socket) this email
-address will show up in the report and help identify the tester.
-This is required for compatibility with tools that process legacy reports
-for analysis.
+Even though CPAN Testers no longer uses email, this email address will
+show up in the report and help identify the tester.  This is required
+for compatibility with tools that process legacy reports for analysis.
 
 EMAIL_REQUIRED
         return;
@@ -462,8 +449,27 @@ DUPLICATE_REPORT
 
     # Set debug and transport options, if supported
     $tr->debug( $config->{debug} ) if defined $config->{debug};
-    my $transport = $config->{transport} || 'Net::SMTP';
+    my $transport = $config->{transport};
+    unless ( defined $transport && length $transport ) {
+        $CPAN::Frontend->mywarn( << "TRANSPORT_REQUIRED");
+
+CPAN::Reporter: required 'transport' option missing so the test report
+will not be sent. See documentation for configuration details.
+
+TRANSPORT_REQUIRED
+        return;
+    }
     my @transport_args = split " ", $transport;
+
+    # special hack for Metabase arguments
+    if ($transport_args[0] eq 'Metabase') {
+        @transport_args = _validate_metabase_args(@transport_args);
+        unless (@transport_args) {
+            $CPAN::Frontend->mywarn( "Test report will not be sent.\n\n" );
+            return;
+        }
+    }
+
     eval { $tr->transport( @transport_args ) };
     if ($@) {
         $CPAN::Frontend->mywarn(
@@ -476,11 +482,6 @@ DUPLICATE_REPORT
 
     # prepare mail transport
     $tr->from( $config->{email_from} );
-    $tr->address( $config->{email_to} ) if $config->{email_to};
-    if ( $config->{smtp_server} ) {
-        my @mx = split " ", $config->{smtp_server};
-        $tr->mx( \@mx );
-    }
 
     # Populate the test report
     $tr->comments( _report_text( $result ) );
@@ -1321,6 +1322,7 @@ HERE
 
 my @toolchain_mods= qw(
     CPAN
+    CPAN::Meta
     Cwd
     ExtUtils::CBuilder
     ExtUtils::Command
@@ -1329,13 +1331,16 @@ my @toolchain_mods= qw(
     ExtUtils::Manifest
     ExtUtils::ParseXS
     File::Spec
+    JSON
+    JSON::PP
     Module::Build
     Module::Signature
+    Parse::CPAN::Meta
     Test::Harness
     Test::More
-    version
     YAML
     YAML::Syck
+    version
 );
 
 sub _toolchain_report {
@@ -1363,6 +1368,68 @@ sub _toolchain_report {
     return $report;
 }
 
+
+#--------------------------------------------------------------------------#
+# _validate_metabase_args
+#
+# This is a kludge to make metabase transport args a little less
+# clunky for novice users
+#--------------------------------------------------------------------------#
+
+sub _validate_metabase_args {
+    my @transport_args = @_;
+    shift @transport_args; # drop leading 'Metabase'
+    my (%args, $error);
+
+    if ( @transport_args % 2 != 0 ) {
+        $error = << "TRANSPORT_ARGS";
+
+CPAN::Reporter: Metabase 'transport' option had odd number of
+parameters in the config file. See documentation for proper
+configuration format.
+
+TRANSPORT_ARGS
+    }
+    else {
+        %args = @transport_args;
+
+        for my $key ( qw/uri id_file/ ) {
+            if ( ! $args{$key} ) {
+                $error = << "TRANSPORT_ARGS";
+
+CPAN::Reporter: Metabase 'transport' option did not have
+a '$key' parameter in the config file. See documentation for
+proper configuration format.
+
+TRANSPORT_ARGS
+            }
+        }
+    }
+
+    if ( $error ) {
+        $CPAN::Frontend->mywarn( $error );
+        return;
+    }
+
+    unless ( File::Spec->file_name_is_absolute( $args{id_file} ) ) {
+        $args{id_file} = File::Spec->catfile(
+            CPAN::Reporter::Config::_get_config_dir(), $args{id_file}
+        );
+    }
+
+    if ( ! -r $args{id_file} ) {
+        $CPAN::Frontend->mywarn( <<"TRANSPORT_ARGS" );
+
+CPAN::Reporter: Could not find Metabase tranport 'id_file' parameter
+located at '$args{id_file}'.
+See documentation for proper configuration of the 'transport' setting.
+
+TRANSPORT_ARGS
+        return;
+    }
+
+    return ('Metabase', %args);
+}
 
 
 #--------------------------------------------------------------------------#
@@ -1427,7 +1494,7 @@ CPAN::Reporter - Adds CPAN Testers reporting to CPAN.pm
 
 =head1 VERSION
 
-version 1.1902
+version 1.19_03
 
 =head1 SYNOPSIS
 
@@ -1489,12 +1556,11 @@ Users will need to enter an email address in one of the following formats:
   John Doe <johndoe@example.com>
   "John Q. Public" <johnqpublic@example.com>
 
-Users will also be prompted to enter the name of an outbound email server.  It
-is recommended to use an email server provided by the user's ISP or company.
-Alternatively, leave this blank to attempt to send email directly to perl.org.
-
 Users that are new to CPAN::Reporter should accept the recommended values
 for other configuration options.
+
+Users will be prompted to create a I<Metabase profile> file that uniquely
+identifies their test reports. See L</"The Metabase"> below for details.
 
 After completing interactive configuration, be sure to commit (save) the CPAN
 configuration changes.
@@ -1503,18 +1569,31 @@ configuration changes.
 
 See L<CPAN::Reporter::Config> for advanced configuration settings.
 
+=head3 The Metabase
+
+CPAN::Reporter sends test reports to a server known as the Metabase.  This
+requires an active Internet connection and a profile file.  To create the
+profile, users will need to run C<<< metabase-profile >>> from a terminal window and
+fill the information at the prompts. This will create a file called
+C<<< metabase_id.json >>> in the current directory. That file should be moved to the
+C<<< .cpanreporter >>> directory inside the user's home dir.
+
+Users with an existing metabase profile file (e.g. from another machine),
+should copy it into the C<<< .cpanreporter >>> directory instead of creating
+a new one.  Profile files may be located outside the C<<< .cpanreporter >>>
+directory by following instructions in L<CPAN::Reporter::Config>.
+
 =head2 Using CPAN::Reporter
 
 Once CPAN::Reporter is enabled and configured, test or install modules with
 CPAN.pm as usual.
 
-For example, to force CPAN to repeat tests for CPAN::Reporter to see how it
-works:
+For example, to test the File::Marker module:
 
-  cpan> force test CPAN::Reporter
+  cpan> test File::Marker
 
-When distribution tests fail, users will be prompted to edit the report to add
-addition information.
+If a distribution's tests fail, users will be prompted to edit the report to
+add additional information that might help the author understand the failure.
 
 =head1 UNDERSTANDING TEST GRADES
 
@@ -1612,6 +1691,25 @@ L<CPAN::Reporter::FAQ> -- hints and tips
 
 =back
 
+=for :stopwords cpan testmatrix url annocpan anno bugtracker rt cpants kwalitee diff irc mailto metadata placeholders
+
+=head1 SUPPORT
+
+=head2 Bugs / Feature Requests
+
+Please report any bugs or feature requests by email to C<bug-cpan-reporter at rt.cpan.org>, or through
+the web interface at L<http://rt.cpan.org/Public/Dist/Display.html?Name=CPAN-Reporter>. You will be automatically notified of any
+progress on the request by the system.
+
+=head2 Source Code
+
+This is open source software.  The code repository is available for
+public review and contribution under the terms of the license.
+
+L<http://github.com/dagolden/cpan-reporter>
+
+  git clone git://github.com/dagolden/cpan-reporter.git
+
 =head1 AUTHOR
 
 David Golden <dagolden@cpan.org>
@@ -1629,3 +1727,5 @@ This is free software, licensed under:
 
 __END__
 
+
+# vim: ts=4 sts=4 sw=4 et:

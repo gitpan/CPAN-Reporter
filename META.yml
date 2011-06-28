@@ -11,9 +11,9 @@ build_requires:
   Test::Harness: 0
   Test::More: 0.62
 configure_requires:
-  ExtUtils::MakeMaker: 6.31
+  ExtUtils::MakeMaker: 6.30
 dynamic_config: 0
-generated_by: 'Dist::Zilla version 4.200001, CPAN::Meta::Converter version 2.102400'
+generated_by: 'Dist::Zilla version 4.200006, CPAN::Meta::Converter version 2.110930'
 license: apache
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -30,22 +30,22 @@ no_index:
 provides:
   CPAN::Reporter:
     file: lib/CPAN/Reporter.pm
-    version: 1.1902
+    version: 1.19_03
   CPAN::Reporter::API:
     file: lib/CPAN/Reporter/API.pm
-    version: 1.1902
+    version: 1.19_03
   CPAN::Reporter::Config:
     file: lib/CPAN/Reporter/Config.pm
-    version: 1.1902
+    version: 1.19_03
   CPAN::Reporter::FAQ:
     file: lib/CPAN/Reporter/FAQ.pm
-    version: 1.1902
+    version: 1.19_03
   CPAN::Reporter::History:
     file: lib/CPAN/Reporter/History.pm
-    version: 1.1902
+    version: 1.19_03
   CPAN::Reporter::PrereqCheck:
     file: lib/CPAN/Reporter/PrereqCheck.pm
-    version: 1.1902
+    version: 1.19_03
 requires:
   CPAN: 1.9301
   CPAN::Version: 0
@@ -64,14 +64,15 @@ requires:
   File::Spec: 3.19
   File::Temp: 0.16
   IO::File: 0
+  IPC::Cmd: 0.46
   Parse::CPAN::Meta: 0
   Probe::Perl: 0
-  Tee: 0.14
   Test::Reporter: 1.54
+  Test::Reporter::Transport::Metabase: 1.999008
   constant: 0
   perl: 5.006
   vars: 0
 resources:
-  homepage: http://github.com/dagolden/cpan-reporter/tree
+  bugtracker: http://rt.cpan.org/Public/Dist/Display.html?Name=CPAN-Reporter
   repository: git://github.com/dagolden/cpan-reporter.git
-version: 1.1902
+version: 1.19_03

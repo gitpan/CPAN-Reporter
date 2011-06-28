@@ -2,7 +2,7 @@ NAME
     CPAN::Reporter - Adds CPAN Testers reporting to CPAN.pm
 
 VERSION
-    version 1.1902
+    version 1.19_03
 
 SYNOPSIS
     From the CPAN shell:
@@ -55,13 +55,11 @@ GETTING STARTED
       John Doe <johndoe@example.com>
       "John Q. Public" <johnqpublic@example.com>
 
-    Users will also be prompted to enter the name of an outbound email
-    server. It is recommended to use an email server provided by the user's
-    ISP or company. Alternatively, leave this blank to attempt to send email
-    directly to perl.org.
-
     Users that are new to CPAN::Reporter should accept the recommended
     values for other configuration options.
+
+    Users will be prompted to create a *Metabase profile* file that uniquely
+    identifies their test reports. See "The Metabase" below for details.
 
     After completing interactive configuration, be sure to commit (save) the
     CPAN configuration changes.
@@ -70,17 +68,32 @@ GETTING STARTED
 
     See CPAN::Reporter::Config for advanced configuration settings.
 
+   The Metabase
+    CPAN::Reporter sends test reports to a server known as the Metabase.
+    This requires an active Internet connection and a profile file. To
+    create the profile, users will need to run "metabase-profile" from a
+    terminal window and fill the information at the prompts. This will
+    create a file called "metabase_id.json" in the current directory. That
+    file should be moved to the ".cpanreporter" directory inside the user's
+    home dir.
+
+    Users with an existing metabase profile file (e.g. from another
+    machine), should copy it into the ".cpanreporter" directory instead of
+    creating a new one. Profile files may be located outside the
+    ".cpanreporter" directory by following instructions in
+    CPAN::Reporter::Config.
+
   Using CPAN::Reporter
     Once CPAN::Reporter is enabled and configured, test or install modules
     with CPAN.pm as usual.
 
-    For example, to force CPAN to repeat tests for CPAN::Reporter to see how
-    it works:
+    For example, to test the File::Marker module:
 
-      cpan> force test CPAN::Reporter
+      cpan> test File::Marker
 
-    When distribution tests fail, users will be prompted to edit the report
-    to add addition information.
+    If a distribution's tests fail, users will be prompted to edit the
+    report to add additional information that might help the author
+    understand the failure.
 
 UNDERSTANDING TEST GRADES
     CPAN::Reporter will assign one of the following grades to the report:
@@ -146,6 +159,22 @@ SEE ALSO
     *   CPAN::Reporter::Config -- advanced configuration settings
 
     *   CPAN::Reporter::FAQ -- hints and tips
+
+SUPPORT
+  Bugs / Feature Requests
+    Please report any bugs or feature requests by email to
+    "bug-cpan-reporter at rt.cpan.org", or through the web interface at
+    <http://rt.cpan.org/Public/Dist/Display.html?Name=CPAN-Reporter>. You
+    will be automatically notified of any progress on the request by the
+    system.
+
+  Source Code
+    This is open source software. The code repository is available for
+    public review and contribution under the terms of the license.
+
+    <http://github.com/dagolden/cpan-reporter>
+
+      git clone git://github.com/dagolden/cpan-reporter.git
 
 AUTHOR
     David Golden <dagolden@cpan.org>

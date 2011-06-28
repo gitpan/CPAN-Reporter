@@ -10,7 +10,7 @@
 use strict; # make CPANTS happy
 package CPAN::Reporter::FAQ;
 BEGIN {
-  $CPAN::Reporter::FAQ::VERSION = '1.1902';
+  $CPAN::Reporter::FAQ::VERSION = '1.19_03';
 }
 # ABSTRACT: Answers and tips for using CPAN::Reporter
 
@@ -27,7 +27,7 @@ CPAN::Reporter::FAQ - Answers and tips for using CPAN::Reporter
 
 =head1 VERSION
 
-version 1.1902
+version 1.19_03
 
 =head1 REPORT GRADES
 
@@ -36,7 +36,7 @@ version 1.1902
 Historically, CPAN Testers was designed to have each tester send a copy of
 reports to authors.  This philosophy changed in September 2008 and CPAN Testers
 tools were updated to no longer copy authors, but some testers may still be
-using an older versions.
+using an older version.
 
 =head2 Why was a report sent if a prerequisite is missing?
 
@@ -53,42 +53,43 @@ prerequisites.
 
 =head2 Why did I get an error sending a test report?
 
-Test reports are sent via ordinary email.  The most common reason for errors
-sending a report is that many Internet Service Providers (ISP's) will block
+Historically, test reports were sent via ordinary email.
+The most common reason for errors sending a report back then was that
+many Internet Service Providers (ISP's) would block
 outbound SMTP (email) connections as part of their efforts to fight spam.
-Instead, email must be routed to the ISP's outbound mail servers, which will
-relay the email to the intended destination.
 
-You can configure CPAN::Reporter to use a specific outbound email server 
-with the C<<< smtp_server >>> configuration option.
+Since 2010, test reports are sent to the CPAN Testers Metabase over HTTPS. The
+most common reason for failures are systems which upgraded CPAN::Reporter but
+are still configured to use the deprecated and unsupported email system instead
+of Metabase for transport.
 
-  smtp_server = mail.some-isp.com
+If you are unsure which transport mechanism you're using, look for the
+C<<< transport >>> rule in the C<<< .cpanreporter/config.ini >>> file, in the
+user's home directory.  See L<CPAN::Reporter::Config> for details on how
+to set the C<<< transport >>> option for Metabase.
 
-In at least one case, an ISP has blocked outbound email unless the 
-"from" address was the assigned email address from that ISP.
+Other errors could be caused by the absence of the
+C<<< .cpanreporter/metabase_id.json >>> file in the user's home directory. This file
+should be manually created prior to sending any reports, via the
+C<<< metabase-profile >>> program. Simply run it and fill the informations
+accordingly, and it will create the C<<< metabase_id.json >>> file for you. Move that
+file to your C<<< .cpanreporter >>> directory and you're all set.
+
+Finally, lack of Internet connection or firewall filtering will prevent
+the report from reaching the CPAN Testers servers. If you are experiencing
+HTTPS issues or messages complaining about SSL modules, try installing
+the L<LWP::Protocol::https> module and trying again. If all fails, you
+may still change the transport uri to use HTTP instead of HTTPS, though
+this is I<not> recommended.
 
 =head2 Why didn't my test report show up on CPAN Testers?
 
-CPAN Testers uses a mailing list to collect test reports.  If the email
-address you set in C<<< email_from >>> is subscribed to the list, your emails
-will be automatically processed.  Otherwise, test reports will be held 
-until manually reviewed and approved.  
-
-Subscribing an account to the cpan-testers list is as easy as sending a blank
-email to cpan-testers-subscribe@perl.org and replying to the confirmation
-email.
-
-There is a delay between the time emails appear on the mailing list and the
-time they appear on the CPAN Testers website. There is a further delay before
-summary statistics appear on search.cpan.org.
-
-If your email address is subscribed to the list but your test reports are still
-not showing up, your outbound email may have been silently blocked by your
-ISP.  See the question above about errors sending reports.
-
-=head2 Why don't you support sending reports via HTTP or authenticated SMTP?
-
-We do!  See the C<<< transport >>> option in L<CPAN::Reporter::Config>.
+There is a delay between the time reports are sent to the Metabase and when
+they they appear on the CPAN Testers website. There is a further delay before
+summary statistics appear on search.cpan.org.  If your reports do not appear
+after 24 hours, please contact the cpan-testers-discuss email list
+(L<http://lists.perl.org/list/cpan-testers-discuss.html>) or join the
+C<<< #cpantesters-discuss >>> IRC channel on C<<< irc.perl.org >>>.
 
 =head1 CPAN TESTERS
 
@@ -103,17 +104,8 @@ CPAN Testers statistics are compiled at L<http://stats.cpantesters.org/>
 
 =head2 How do I make sure I get credit for my test reports?
 
-To get credit in the statistics, use the same email address wherever 
-you run tests.
-
-For example, if you are a CPAN author, use your PAUSEID email address.
-
-  email_from = pauseid@cpan.org
-
-Otherwise, you should use a consistent "Full Name" as part of your 
-email address in the C<<< email_from >>> option.
-
-  email_from = "John Doe" <john.doe@example.com> 
+To get credit in the statistics, use the same Metabase profile file
+and the same email address wherever you run tests.
 
 =head1 SEE ALSO
 

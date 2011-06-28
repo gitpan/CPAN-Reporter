@@ -10,17 +10,13 @@
 use strict;
 package CPAN::Reporter::PrereqCheck;
 BEGIN {
-  $CPAN::Reporter::PrereqCheck::VERSION = '1.1902';
+  $CPAN::Reporter::PrereqCheck::VERSION = '1.19_03';
 }
 # ABSTRACT: Modulino for prerequisite tests
 
 use ExtUtils::MakeMaker 6.36;
 use File::Spec;
 use CPAN::Version;
-
-my %substitute = (
-  'Module::Install' => 'inc::Module::Install',
-);
 
 _run() if ! caller();
 
@@ -35,19 +31,16 @@ sub _run {
         die "Couldn't read module for '$_'" unless $mod;
         $need = 0 if not defined $need;
 
-        # handle any odd cases
-        my $testmod = $substitute{$mod} || $mod;
-
         # only evaluate a module once
-        next if $saw_mod{$testmod}++;
+        next if $saw_mod{$mod}++;
 
         # get installed version from file with EU::MM
         my($have, $inst_file, $dir, @packpath);
-        if ( $testmod eq "perl" ) {
+        if ( $mod eq "perl" ) {
             $have = $];
         }
         else {
-            @packpath = split( /::/, $testmod );
+            @packpath = split( /::/, $mod );
             $packpath[-1] .= ".pm";
             if (@packpath == 1 && $packpath[0] eq "readline.pm") {
                 unshift @packpath, "Term", "ReadLine"; # historical reasons
@@ -68,7 +61,7 @@ sub _run {
                 # report broken if it can't be loaded
                 # "select" to try to suppress spurious newlines
                 select DEVNULL; ## no critic
-                if ( ! eval "use $testmod (); 1" ) {
+                if ( ! _try_load( $mod, $have, $inst_file ) ) {
                     select STDOUT; ## no critic
                     print "$mod 0 broken\n";
                     next;
@@ -121,6 +114,18 @@ sub _run {
     return;
 }
 
+sub _try_load {
+  my ($module, $have, $file) = @_;
+
+  # M::I < 0.95 dies in require, so we can't check if it loads
+  # Instead we just pretend that it works
+  if ( $module eq 'Module::Install' && $have < 0.95 ) {
+    return 1;
+  }
+
+  return eval q{require $file; 1};
+}
+
 1;
 
 
@@ -133,7 +138,7 @@ CPAN::Reporter::PrereqCheck - Modulino for prerequisite tests
 
 =head1 VERSION
 
-version 1.1902
+version 1.19_03
 
 =head1 SYNOPSIS
 

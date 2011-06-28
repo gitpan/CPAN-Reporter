@@ -10,7 +10,7 @@
 use strict; 
 package CPAN::Reporter::History;
 BEGIN {
-  $CPAN::Reporter::History::VERSION = '1.1902';
+  $CPAN::Reporter::History::VERSION = '1.19_03';
 }
 # ABSTRACT: Read or write a CPAN::Reporter history log
 
@@ -326,7 +326,7 @@ CPAN::Reporter::History - Read or write a CPAN::Reporter history log
 
 =head1 VERSION
 
-version 1.1902
+version 1.19_03
 
 =head1 SYNOPSIS
 
