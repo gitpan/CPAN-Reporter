@@ -2,14 +2,17 @@ NAME
     CPAN::Reporter - Adds CPAN Testers reporting to CPAN.pm
 
 VERSION
-    version 1.19_03
+    version 1.19_04
 
 SYNOPSIS
     From the CPAN shell:
 
-      cpan> install CPAN::Reporter
+      cpan> install Task::CPAN::Reporter
       cpan> reload cpan
       cpan> o conf init test_report
+
+    Installing Task::CPAN::Reporter will pull in additional dependencies
+    that new CPAN Testers will need.
 
 DESCRIPTION
     The CPAN Testers project captures and analyses detailed results from

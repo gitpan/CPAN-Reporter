@@ -1,14 +1,35 @@
 Revision history for Perl module CPAN::Reporter
 
+1.19_04   2011-06-29 17:39:25 America/New_York
+
+  [NEW FEATURES]
+
+  - Metabase profile generation will use as much of the provided
+    email_from parameter as possible and will generate a random
+    secret API key.  If user provides email_from in a standard form
+    like C<< "John Q. Public" <jqp@example.com> >> then profile
+    generation is entirely automatic without additional prompts
+    from metabase-profile [David Golden]
+
+  [DOCUMENTATION]
+
+  - Swapped in Task::CPAN::Reporter in the SYNOPSIS [David Golden]
+
+  [BUG FIXES]
+
+  - Expands "~" into user directory before attempting to locate
+    'relative' pathname in .cpanreporter directory [David Golden]
+
 1.19_03   2011-06-28 14:44:19 America/New_York
 
   [NEW FEATURES]
   - During configuration, if 'Metabase' is the requested transport and
     a Metabase profile file is not found, configuration will offer to
-    run metabase-profile to create it.
+    run metabase-profile to create it. [David Golden]
 
   - For Metabase transport (only), the 'id_file' may have a relative
     file path, treated as relative to the .cpanreporter directory.
+    [David Golden]
 
   [BUG FIXES]
   - updated CPAN::Reporter to go with Metabase by default, instead of

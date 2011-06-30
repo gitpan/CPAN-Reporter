@@ -10,7 +10,7 @@
 use strict;
 package CPAN::Reporter;
 BEGIN {
-  $CPAN::Reporter::VERSION = '1.19_03';
+  $CPAN::Reporter::VERSION = '1.19_04';
 }
 # ABSTRACT: Adds CPAN Testers reporting to CPAN.pm
 
@@ -1411,11 +1411,7 @@ TRANSPORT_ARGS
         return;
     }
 
-    unless ( File::Spec->file_name_is_absolute( $args{id_file} ) ) {
-        $args{id_file} = File::Spec->catfile(
-            CPAN::Reporter::Config::_get_config_dir(), $args{id_file}
-        );
-    }
+    $args{id_file} = CPAN::Reporter::Config::_normalize_id_file( $args{id_file} );
 
     if ( ! -r $args{id_file} ) {
         $CPAN::Frontend->mywarn( <<"TRANSPORT_ARGS" );
@@ -1494,15 +1490,18 @@ CPAN::Reporter - Adds CPAN Testers reporting to CPAN.pm
 
 =head1 VERSION
 
-version 1.19_03
+version 1.19_04
 
 =head1 SYNOPSIS
 
 From the CPAN shell:
 
-  cpan> install CPAN::Reporter
+  cpan> install Task::CPAN::Reporter
   cpan> reload cpan
   cpan> o conf init test_report
+
+Installing L<Task::CPAN::Reporter> will pull in additional dependencies
+that new CPAN Testers will need.
 
 =head1 DESCRIPTION
 

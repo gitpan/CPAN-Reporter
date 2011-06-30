@@ -40,6 +40,7 @@ my %WriteMakefileArgs = (
     'Fcntl' => '0',
     'File::Basename' => '0',
     'File::Find' => '0',
+    'File::Glob' => '0',
     'File::HomeDir' => '0.58',
     'File::Path' => '0',
     'File::Spec' => '3.19',
@@ -53,7 +54,7 @@ my %WriteMakefileArgs = (
     'constant' => '0',
     'vars' => '0'
   },
-  'VERSION' => '1.19_03',
+  'VERSION' => '1.19_04',
   'test' => {
     'TESTS' => 't/*.t'
   }

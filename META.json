@@ -44,6 +44,7 @@
             "Fcntl" : 0,
             "File::Basename" : 0,
             "File::Find" : 0,
+            "File::Glob" : 0,
             "File::HomeDir" : "0.58",
             "File::Path" : 0,
             "File::Spec" : "3.19",
@@ -74,27 +75,27 @@
    "provides" : {
       "CPAN::Reporter" : {
          "file" : "lib/CPAN/Reporter.pm",
-         "version" : "1.19_03"
+         "version" : "1.19_04"
       },
       "CPAN::Reporter::API" : {
          "file" : "lib/CPAN/Reporter/API.pm",
-         "version" : "1.19_03"
+         "version" : "1.19_04"
       },
       "CPAN::Reporter::Config" : {
          "file" : "lib/CPAN/Reporter/Config.pm",
-         "version" : "1.19_03"
+         "version" : "1.19_04"
       },
       "CPAN::Reporter::FAQ" : {
          "file" : "lib/CPAN/Reporter/FAQ.pm",
-         "version" : "1.19_03"
+         "version" : "1.19_04"
       },
       "CPAN::Reporter::History" : {
          "file" : "lib/CPAN/Reporter/History.pm",
-         "version" : "1.19_03"
+         "version" : "1.19_04"
       },
       "CPAN::Reporter::PrereqCheck" : {
          "file" : "lib/CPAN/Reporter/PrereqCheck.pm",
-         "version" : "1.19_03"
+         "version" : "1.19_04"
       }
    },
    "release_status" : "testing",
@@ -109,6 +110,6 @@
          "web" : "http://github.com/dagolden/cpan-reporter"
       }
    },
-   "version" : "1.19_03"
+   "version" : "1.19_04"
 }
 
