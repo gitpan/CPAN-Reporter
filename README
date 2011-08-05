@@ -2,7 +2,7 @@ NAME
     CPAN::Reporter - Adds CPAN Testers reporting to CPAN.pm
 
 VERSION
-    version 1.19_04
+    version 1.20
 
 SYNOPSIS
     From the CPAN shell:
@@ -13,6 +13,9 @@ SYNOPSIS
 
     Installing Task::CPAN::Reporter will pull in additional dependencies
     that new CPAN Testers will need.
+
+    Advanced CPAN Testers with custom Test::Reporter::Transport setups may
+    wish to install only CPAN::Reporter, which has fewer dependencies.
 
 DESCRIPTION
     The CPAN Testers project captures and analyses detailed results from
@@ -177,7 +180,7 @@ SUPPORT
 
     <http://github.com/dagolden/cpan-reporter>
 
-      git clone git://github.com/dagolden/cpan-reporter.git
+      git clone http://github.com/dagolden/cpan-reporter
 
 AUTHOR
     David Golden <dagolden@cpan.org>

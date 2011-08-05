@@ -1,18 +1,6 @@
-#
-# This file is part of CPAN-Reporter
-#
-# This software is Copyright (c) 2006 by David Golden.
-#
-# This is free software, licensed under:
-#
-#   The Apache License, Version 2.0, January 2004
-#
 use strict; 
 package CPAN::Reporter::History;
-BEGIN {
-  $CPAN::Reporter::History::VERSION = '1.19_04';
-}
-# ABSTRACT: Read or write a CPAN::Reporter history log
+our $VERSION = '1.20'; # VERSION
 
 use vars qw/@ISA @EXPORT_OK/;
 
@@ -317,6 +305,9 @@ sub _split_history {
 
 1;
 
+# ABSTRACT: Read or write a CPAN::Reporter history log
+
+
 
 =pod
 
@@ -326,7 +317,7 @@ CPAN::Reporter::History - Read or write a CPAN::Reporter history log
 
 =head1 VERSION
 
-version 1.19_04
+version 1.20
 
 =head1 SYNOPSIS
 

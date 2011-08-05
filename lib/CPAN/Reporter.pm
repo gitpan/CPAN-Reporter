@@ -1,18 +1,6 @@
-#
-# This file is part of CPAN-Reporter
-#
-# This software is Copyright (c) 2006 by David Golden.
-#
-# This is free software, licensed under:
-#
-#   The Apache License, Version 2.0, January 2004
-#
 use strict;
 package CPAN::Reporter;
-BEGIN {
-  $CPAN::Reporter::VERSION = '1.19_04';
-}
-# ABSTRACT: Adds CPAN Testers reporting to CPAN.pm
+our $VERSION = '1.20'; # VERSION
 
 use Config;
 use Capture::Tiny qw/ capture tee_merged /;
@@ -1478,7 +1466,9 @@ sub _version_finder {
     return \%result;
 }
 
-1; #this line is important and will help the module return a true value
+1;
+
+# ABSTRACT: Adds CPAN Testers reporting to CPAN.pm
 
 
 
@@ -1490,7 +1480,7 @@ CPAN::Reporter - Adds CPAN Testers reporting to CPAN.pm
 
 =head1 VERSION
 
-version 1.19_04
+version 1.20
 
 =head1 SYNOPSIS
 
@@ -1502,6 +1492,9 @@ From the CPAN shell:
 
 Installing L<Task::CPAN::Reporter> will pull in additional dependencies
 that new CPAN Testers will need.
+
+Advanced CPAN Testers with custom L<Test::Reporter::Transport> setups
+may wish to install only CPAN::Reporter, which has fewer dependencies.
 
 =head1 DESCRIPTION
 
@@ -1707,7 +1700,7 @@ public review and contribution under the terms of the license.
 
 L<http://github.com/dagolden/cpan-reporter>
 
-  git clone git://github.com/dagolden/cpan-reporter.git
+  git clone http://github.com/dagolden/cpan-reporter
 
 =head1 AUTHOR
 

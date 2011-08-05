@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 
-BEGIN { require 5.006; }
+use 5.006;
 
 use ExtUtils::MakeMaker 6.30;
 
@@ -50,11 +50,10 @@ my %WriteMakefileArgs = (
     'Parse::CPAN::Meta' => '0',
     'Probe::Perl' => '0',
     'Test::Reporter' => '1.54',
-    'Test::Reporter::Transport::Metabase' => '1.999008',
     'constant' => '0',
     'vars' => '0'
   },
-  'VERSION' => '1.19_04',
+  'VERSION' => '1.20',
   'test' => {
     'TESTS' => 't/*.t'
   }

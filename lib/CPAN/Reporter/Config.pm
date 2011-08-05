@@ -1,18 +1,6 @@
-#
-# This file is part of CPAN-Reporter
-#
-# This software is Copyright (c) 2006 by David Golden.
-#
-# This is free software, licensed under:
-#
-#   The Apache License, Version 2.0, January 2004
-#
 use strict;
 package CPAN::Reporter::Config;
-BEGIN {
-  $CPAN::Reporter::Config::VERSION = '1.19_04';
-}
-# ABSTRACT: Config file options for CPAN::Reporter
+our $VERSION = '1.20'; # VERSION
 
 use Config::Tiny 2.08 ();
 use File::Glob ();
@@ -657,6 +645,9 @@ sub _validate_skipfile {
 
 1;
 
+# ABSTRACT: Config file options for CPAN::Reporter
+
+
 
 =pod
 
@@ -666,7 +657,7 @@ CPAN::Reporter::Config - Config file options for CPAN::Reporter
 
 =head1 VERSION
 
-version 1.19_04
+version 1.20
 
 =head1 SYNOPSIS
 

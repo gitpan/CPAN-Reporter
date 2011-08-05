@@ -1,18 +1,6 @@
-#
-# This file is part of CPAN-Reporter
-#
-# This software is Copyright (c) 2006 by David Golden.
-#
-# This is free software, licensed under:
-#
-#   The Apache License, Version 2.0, January 2004
-#
 use strict;
 package CPAN::Reporter::PrereqCheck;
-BEGIN {
-  $CPAN::Reporter::PrereqCheck::VERSION = '1.19_04';
-}
-# ABSTRACT: Modulino for prerequisite tests
+our $VERSION = '1.20'; # VERSION
 
 use ExtUtils::MakeMaker 6.36;
 use File::Spec;
@@ -128,6 +116,8 @@ sub _try_load {
 
 1;
 
+# ABSTRACT: Modulino for prerequisite tests
+
 
 
 =pod
@@ -138,7 +128,7 @@ CPAN::Reporter::PrereqCheck - Modulino for prerequisite tests
 
 =head1 VERSION
 
-version 1.19_04
+version 1.20
 
 =head1 SYNOPSIS
 
