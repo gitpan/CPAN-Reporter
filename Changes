@@ -1,5 +1,13 @@
 Revision history for Perl module CPAN::Reporter
 
+1.2002    2011-08-10 17:52:08 America/New_York
+
+  [BUG FIXES]
+
+  - Fix failing tests on systems without
+    Test::Reporter::Transport::Metabase
+  - Minor test cleanups for use with 'prove'
+
 1.2001    2011-08-07 05:05:58 America/New_York
 
   [BUG FIXES]

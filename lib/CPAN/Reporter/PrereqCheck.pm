@@ -1,6 +1,6 @@
 use strict;
 package CPAN::Reporter::PrereqCheck;
-our $VERSION = '1.2001'; # VERSION
+our $VERSION = '1.2002'; # VERSION
 
 use ExtUtils::MakeMaker 6.36;
 use File::Spec;
@@ -128,7 +128,7 @@ CPAN::Reporter::PrereqCheck - Modulino for prerequisite tests
 
 =head1 VERSION
 
-version 1.2001
+version 1.2002
 
 =head1 SYNOPSIS
 

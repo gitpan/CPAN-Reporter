@@ -1,6 +1,6 @@
 use strict;
 package CPAN::Reporter;
-our $VERSION = '1.2001'; # VERSION
+our $VERSION = '1.2002'; # VERSION
 
 use Config;
 use Capture::Tiny qw/ capture tee_merged /;
@@ -1480,7 +1480,7 @@ CPAN::Reporter - Adds CPAN Testers reporting to CPAN.pm
 
 =head1 VERSION
 
-version 1.2001
+version 1.2002
 
 =head1 SYNOPSIS
 
