@@ -1,6 +1,6 @@
 use strict;
 package CPAN::Reporter::Config;
-our $VERSION = '1.2002'; # VERSION
+our $VERSION = '1.2003'; # VERSION
 
 use Config::Tiny 2.08 ();
 use File::Glob ();
@@ -559,7 +559,7 @@ sub _validate_transport {
     my ($name, $option, $config) = @_;
     my $transport = '';
 
-    if ( $option =~ /^(\w+)\s?/ ) {
+    if ( $option =~ /^(\w+(?:::\w+)*)\s?/ ) {
         $transport = $1;
         my $full_class = "Test::Reporter::Transport::$transport";
         eval "use $full_class ()";
@@ -657,7 +657,7 @@ CPAN::Reporter::Config - Config file options for CPAN::Reporter
 
 =head1 VERSION
 
-version 1.2002
+version 1.2003
 
 =head1 SYNOPSIS
 

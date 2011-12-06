@@ -1,6 +1,6 @@
 use strict; # make CPANTS happy
 package CPAN::Reporter::FAQ;
-our $VERSION = '1.2002'; # VERSION
+our $VERSION = '1.2003'; # VERSION
 
 1;
 
@@ -16,7 +16,7 @@ CPAN::Reporter::FAQ - Answers and tips for using CPAN::Reporter
 
 =head1 VERSION
 
-version 1.2002
+version 1.2003
 
 =head1 REPORT GRADES
 

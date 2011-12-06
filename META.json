@@ -4,7 +4,7 @@
       "David Golden <dagolden@cpan.org>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Dist::Zilla version 4.200012, CPAN::Meta::Converter version 2.110930",
+   "generated_by" : "Dist::Zilla version 4.300002, CPAN::Meta::Converter version 2.112580",
    "license" : [
       "apache_2_0"
    ],
@@ -56,6 +56,7 @@
             "Test::Reporter" : "1.54",
             "constant" : 0,
             "perl" : "5.006",
+            "strict" : 0,
             "vars" : 0
          }
       },
@@ -67,34 +68,35 @@
             "File::pushd" : "0.32",
             "IO::CaptureOutput" : "1.03",
             "Test::Harness" : 0,
-            "Test::More" : "0.62"
+            "Test::More" : "0.62",
+            "warnings" : 0
          }
       }
    },
    "provides" : {
       "CPAN::Reporter" : {
          "file" : "lib/CPAN/Reporter.pm",
-         "version" : "1.2002"
+         "version" : "1.2003"
       },
       "CPAN::Reporter::API" : {
          "file" : "lib/CPAN/Reporter/API.pm",
-         "version" : "1.2002"
+         "version" : "1.2003"
       },
       "CPAN::Reporter::Config" : {
          "file" : "lib/CPAN/Reporter/Config.pm",
-         "version" : "1.2002"
+         "version" : "1.2003"
       },
       "CPAN::Reporter::FAQ" : {
          "file" : "lib/CPAN/Reporter/FAQ.pm",
-         "version" : "1.2002"
+         "version" : "1.2003"
       },
       "CPAN::Reporter::History" : {
          "file" : "lib/CPAN/Reporter/History.pm",
-         "version" : "1.2002"
+         "version" : "1.2003"
       },
       "CPAN::Reporter::PrereqCheck" : {
          "file" : "lib/CPAN/Reporter/PrereqCheck.pm",
-         "version" : "1.2002"
+         "version" : "1.2003"
       }
    },
    "release_status" : "stable",
@@ -103,13 +105,13 @@
          "mailto" : "bug-cpan-reporter at rt.cpan.org",
          "web" : "http://rt.cpan.org/Public/Dist/Display.html?Name=CPAN-Reporter"
       },
-      "homepage" : "http://github.com/dagolden/cpan-reporter",
+      "homepage" : "https://github.com/dagolden/cpan-reporter",
       "repository" : {
          "type" : "git",
-         "url" : "http://github.com/dagolden/cpan-reporter",
-         "web" : "http://github.com/dagolden/cpan-reporter"
+         "url" : "https://github.com/dagolden/cpan-reporter.git",
+         "web" : "https://github.com/dagolden/cpan-reporter"
       }
    },
-   "version" : "1.2002"
+   "version" : "1.2003"
 }
 

@@ -1,5 +1,12 @@
 Revision history for Perl module CPAN::Reporter
 
+1.2003    2011-12-06 11:07:04 EST5EDT
+
+  [BUG FIXES]
+
+  - Fix bug in transport class validation to allow multi-level
+    class names [rt.cpan.org #73045]
+
 1.2002    2011-08-10 17:52:08 America/New_York
 
   [BUG FIXES]

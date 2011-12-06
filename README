@@ -2,7 +2,7 @@ NAME
     CPAN::Reporter - Adds CPAN Testers reporting to CPAN.pm
 
 VERSION
-    version 1.2002
+    version 1.2003
 
 SYNOPSIS
     From the CPAN shell:
@@ -178,9 +178,9 @@ SUPPORT
     This is open source software. The code repository is available for
     public review and contribution under the terms of the license.
 
-    <http://github.com/dagolden/cpan-reporter>
+    <https://github.com/dagolden/cpan-reporter>
 
-      git clone http://github.com/dagolden/cpan-reporter
+      git clone https://github.com/dagolden/cpan-reporter.git
 
 AUTHOR
     David Golden <dagolden@cpan.org>
