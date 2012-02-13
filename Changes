@@ -1,5 +1,12 @@
 Revision history for Perl module CPAN::Reporter
 
+1.2004    2012-02-13 16:25:07 EST5EDT
+
+  [BUG FIXES]
+
+  - Fix bug in testing tilde expansion on Windows
+    [rt.cpan.org #72051]
+
 1.2003    2011-12-06 11:07:04 EST5EDT
 
   [BUG FIXES]

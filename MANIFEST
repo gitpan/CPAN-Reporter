@@ -16,6 +16,7 @@ lib/CPAN/Reporter/Config.pm
 lib/CPAN/Reporter/FAQ.pm
 lib/CPAN/Reporter/History.pm
 lib/CPAN/Reporter/PrereqCheck.pm
+perlcritic.rc
 t/00-compile.t
 t/01_CPAN_Reporter.t
 t/02_config_env_vars.t
@@ -79,6 +80,8 @@ t/perl5lib/Bogus/LTE.pm
 t/perl5lib/Bogus/NoVersion.pm
 t/perl5lib/Bogus/Shadow.pm
 t/perl5lib/Bogus/TooOld.pm
+xt/author/critic.t
+xt/author/pod-spell.t
 xt/release/distmeta.t
 xt/release/pod-coverage.t
 xt/release/pod-syntax.t

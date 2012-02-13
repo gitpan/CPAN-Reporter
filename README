@@ -2,7 +2,7 @@ NAME
     CPAN::Reporter - Adds CPAN Testers reporting to CPAN.pm
 
 VERSION
-    version 1.2003
+    version 1.2004
 
 SYNOPSIS
     From the CPAN shell:
@@ -18,7 +18,7 @@ SYNOPSIS
     wish to install only CPAN::Reporter, which has fewer dependencies.
 
 DESCRIPTION
-    The CPAN Testers project captures and analyses detailed results from
+    The CPAN Testers project captures and analyzes detailed results from
     building and testing CPAN distributions on multiple operating systems
     and multiple versions of Perl. This provides valuable feedback to module
     authors and potential users to identify bugs or platform compatibility
@@ -81,7 +81,7 @@ GETTING STARTED
     terminal window and fill the information at the prompts. This will
     create a file called "metabase_id.json" in the current directory. That
     file should be moved to the ".cpanreporter" directory inside the user's
-    home dir.
+    home directory.
 
     Users with an existing metabase profile file (e.g. from another
     machine), should copy it into the ".cpanreporter" directory instead of
@@ -168,11 +168,9 @@ SEE ALSO
 
 SUPPORT
   Bugs / Feature Requests
-    Please report any bugs or feature requests by email to
-    "bug-cpan-reporter at rt.cpan.org", or through the web interface at
+    Please report any bugs or feature requests through the issue tracker at
     <http://rt.cpan.org/Public/Dist/Display.html?Name=CPAN-Reporter>. You
-    will be automatically notified of any progress on the request by the
-    system.
+    will be notified automatically of any progress on your issue.
 
   Source Code
     This is open source software. The code repository is available for

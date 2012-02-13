@@ -1,6 +1,6 @@
 use strict;
 package CPAN::Reporter;
-our $VERSION = '1.2003'; # VERSION
+our $VERSION = '1.2004'; # VERSION
 
 use Config;
 use Capture::Tiny qw/ capture tee_merged /;
@@ -1480,7 +1480,7 @@ CPAN::Reporter - Adds CPAN Testers reporting to CPAN.pm
 
 =head1 VERSION
 
-version 1.2003
+version 1.2004
 
 =head1 SYNOPSIS
 
@@ -1498,7 +1498,7 @@ may wish to install only CPAN::Reporter, which has fewer dependencies.
 
 =head1 DESCRIPTION
 
-The CPAN Testers project captures and analyses detailed results from building
+The CPAN Testers project captures and analyzes detailed results from building
 and testing CPAN distributions on multiple operating systems and multiple
 versions of Perl.  This provides valuable feedback to module authors and
 potential users to identify bugs or platform compatibility issues and improves
@@ -1568,7 +1568,7 @@ requires an active Internet connection and a profile file.  To create the
 profile, users will need to run C<<< metabase-profile >>> from a terminal window and
 fill the information at the prompts. This will create a file called
 C<<< metabase_id.json >>> in the current directory. That file should be moved to the
-C<<< .cpanreporter >>> directory inside the user's home dir.
+C<<< .cpanreporter >>> directory inside the user's home directory.
 
 Users with an existing metabase profile file (e.g. from another machine),
 should copy it into the C<<< .cpanreporter >>> directory instead of creating
@@ -1689,9 +1689,9 @@ L<CPAN::Reporter::FAQ> -- hints and tips
 
 =head2 Bugs / Feature Requests
 
-Please report any bugs or feature requests by email to C<bug-cpan-reporter at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/Public/Dist/Display.html?Name=CPAN-Reporter>. You will be automatically notified of any
-progress on the request by the system.
+Please report any bugs or feature requests through the issue tracker
+at L<http://rt.cpan.org/Public/Dist/Display.html?Name=CPAN-Reporter>.
+You will be notified automatically of any progress on your issue.
 
 =head2 Source Code
 

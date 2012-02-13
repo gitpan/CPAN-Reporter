@@ -1,6 +1,6 @@
 use strict;
 package CPAN::Reporter::Config;
-our $VERSION = '1.2003'; # VERSION
+our $VERSION = '1.2004'; # VERSION
 
 use Config::Tiny 2.08 ();
 use File::Glob ();
@@ -452,7 +452,11 @@ sub _is_valid_grade {
 sub _normalize_id_file {
     my ($id_file) = @_;
 
-    if ( $id_file =~ /~/ ) {
+    # Windows does not use ~ to signify a home directory
+    if ( $^O eq 'MSWin32' && $id_file =~ m{^~/(.*)} ) {
+        $id_file = File::Spec->catdir(File::HomeDir->my_home, $1);
+    }
+    elsif ( $id_file =~ /~/ ) {
         $id_file = File::Glob::bsd_glob( $id_file );
     }
     unless ( File::Spec->file_name_is_absolute( $id_file ) ) {
@@ -657,7 +661,7 @@ CPAN::Reporter::Config - Config file options for CPAN::Reporter
 
 =head1 VERSION
 
-version 1.2003
+version 1.2004
 
 =head1 SYNOPSIS
 
@@ -895,7 +899,7 @@ distribution tarball name.
      DAGOLDEN/CPAN-Reporter-1.00.tar.gz
 
 Lines that begin with a sharp (#) are considered comments and will not be
-matched.  All regular expressionss will be matched case insensitive and will
+matched.  All regular expressions will be matched case insensitive and will
 not be anchored unless you provide one.
 
 As the format of a distribution ID is "AUTHORE<sol>tarball", anchoring at the
@@ -962,8 +966,6 @@ L<CPAN::Reporter::FAQ>
 
 =back
 
-# vim: ts=4 sts=4 sw=4 et:
-
 =head1 AUTHOR
 
 David Golden <dagolden@cpan.org>
@@ -981,3 +983,5 @@ This is free software, licensed under:
 
 __END__
 
+
+# vim: ts=4 sts=4 sw=4 et:

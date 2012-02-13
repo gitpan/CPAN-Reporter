@@ -1,6 +1,6 @@
 use strict;
 package CPAN::Reporter::PrereqCheck;
-our $VERSION = '1.2003'; # VERSION
+our $VERSION = '1.2004'; # VERSION
 
 use ExtUtils::MakeMaker 6.36;
 use File::Spec;
@@ -12,7 +12,7 @@ sub _run {
     my %saw_mod;
     # read module and prereq string from STDIN
     local *DEVNULL;
-    open DEVNULL, ">" . File::Spec->devnull;
+    open DEVNULL, ">" . File::Spec->devnull; ## no critic
     while ( <> ) {
         m/^(\S+)\s+([^\n]*)/;
         my ($mod, $need) = ($1, $2);
@@ -111,7 +111,7 @@ sub _try_load {
     return 1;
   }
 
-  return eval q{require $file; 1};
+  return eval q{require $file; 1}; ## no critic
 }
 
 1;
@@ -128,7 +128,7 @@ CPAN::Reporter::PrereqCheck - Modulino for prerequisite tests
 
 =head1 VERSION
 
-version 1.2003
+version 1.2004
 
 =head1 SYNOPSIS
 
@@ -146,7 +146,7 @@ and so on.
 
 It reads a module name and prerequisite string pair from each line of input
 and prints out the module name, 0 or 1 depending on whether the prerequisite
-is satisifed, and the installed module version.  If the module is not
+is satisfied, and the installed module version.  If the module is not
 available, it will print "nE<sol>a" for the version.  If the module is available
 but can't be loaded, it will print "broken" for the version.  Modules
 without a version will be treated as being of version "0".

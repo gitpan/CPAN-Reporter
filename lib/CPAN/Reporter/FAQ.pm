@@ -1,6 +1,6 @@
 use strict; # make CPANTS happy
 package CPAN::Reporter::FAQ;
-our $VERSION = '1.2003'; # VERSION
+our $VERSION = '1.2004'; # VERSION
 
 1;
 
@@ -16,7 +16,7 @@ CPAN::Reporter::FAQ - Answers and tips for using CPAN::Reporter
 
 =head1 VERSION
 
-version 1.2003
+version 1.2004
 
 =head1 REPORT GRADES
 
@@ -60,7 +60,7 @@ to set the C<<< transport >>> option for Metabase.
 Other errors could be caused by the absence of the
 C<<< .cpanreporter/metabase_id.json >>> file in the user's home directory. This file
 should be manually created prior to sending any reports, via the
-C<<< metabase-profile >>> program. Simply run it and fill the informations
+C<<< metabase-profile >>> program. Simply run it and fill in the information
 accordingly, and it will create the C<<< metabase_id.json >>> file for you. Move that
 file to your C<<< .cpanreporter >>> directory and you're all set.
 

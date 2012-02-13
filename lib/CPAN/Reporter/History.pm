@@ -1,6 +1,6 @@
 use strict;
 package CPAN::Reporter::History;
-our $VERSION = '1.2003'; # VERSION
+our $VERSION = '1.2004'; # VERSION
 
 use vars qw/@ISA @EXPORT_OK/;
 
@@ -320,7 +320,7 @@ CPAN::Reporter::History - Read or write a CPAN::Reporter history log
 
 =head1 VERSION
 
-version 1.2003
+version 1.2004
 
 =head1 SYNOPSIS
 
@@ -368,7 +368,7 @@ C<<< phase >>> -- phase the report was generated during: either 'PL',
 
 =item *
 
-C<<< grade >>> -- CPAN Testers grade: 'PASS', 'FAIL', 'NA' or'UNKNOWN'; Also may
+C<<< grade >>> -- CPAN Testers grade: 'PASS', 'FAIL', 'NA' or 'UNKNOWN'; Also may
 be 'DISCARD' for any failing reports not sent due to missing prerequisites
 
 =back
