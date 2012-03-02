@@ -1,6 +1,6 @@
 use strict;
 package CPAN::Reporter::Config;
-our $VERSION = '1.2004'; # VERSION
+our $VERSION = '1.2005'; # VERSION
 
 use Config::Tiny 2.08 ();
 use File::Glob ();
@@ -457,7 +457,7 @@ sub _normalize_id_file {
         $id_file = File::Spec->catdir(File::HomeDir->my_home, $1);
     }
     elsif ( $id_file =~ /~/ ) {
-        $id_file = File::Glob::bsd_glob( $id_file );
+        $id_file = File::Spec->canonpath(File::Glob::bsd_glob( $id_file ));
     }
     unless ( File::Spec->file_name_is_absolute( $id_file ) ) {
         $id_file = File::Spec->catfile(
@@ -661,7 +661,7 @@ CPAN::Reporter::Config - Config file options for CPAN::Reporter
 
 =head1 VERSION
 
-version 1.2004
+version 1.2005
 
 =head1 SYNOPSIS
 
