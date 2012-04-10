@@ -47,7 +47,7 @@ my %WriteMakefileArgs = (
     "File::Spec" => "3.19",
     "File::Temp" => "0.16",
     "IO::File" => 0,
-    "IPC::Cmd" => "0.46",
+    "IPC::Cmd" => "0.76",
     "Parse::CPAN::Meta" => 0,
     "Probe::Perl" => 0,
     "Test::Reporter" => "1.54",
@@ -55,7 +55,7 @@ my %WriteMakefileArgs = (
     "strict" => 0,
     "vars" => 0
   },
-  "VERSION" => "1.2005",
+  "VERSION" => "1.2006",
   "test" => {
     "TESTS" => "t/*.t"
   }

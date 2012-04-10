@@ -1,13 +1,13 @@
 use strict;
 package CPAN::Reporter::Config;
-our $VERSION = '1.2005'; # VERSION
+our $VERSION = '1.2006'; # VERSION
 
 use Config::Tiny 2.08 ();
 use File::Glob ();
 use File::HomeDir 0.58 ();
 use File::Path qw/mkpath/;
 use File::Spec 3.19 ();
-use IPC::Cmd 0.46 ();
+use IPC::Cmd 0.76 ();
 use IO::File ();
 use CPAN 1.9301 (); # for printing warnings
 
@@ -661,7 +661,7 @@ CPAN::Reporter::Config - Config file options for CPAN::Reporter
 
 =head1 VERSION
 
-version 1.2005
+version 1.2006
 
 =head1 SYNOPSIS
 
