@@ -1,12 +1,12 @@
 use strict; # make CPANTS happy
 package CPAN::Reporter::FAQ;
-our $VERSION = '1.2006'; # VERSION
+our $VERSION = '1.2007'; # VERSION
 
 1;
 
 # ABSTRACT: Answers and tips for using CPAN::Reporter
 
-
+__END__
 
 =pod
 
@@ -16,7 +16,7 @@ CPAN::Reporter::FAQ - Answers and tips for using CPAN::Reporter
 
 =head1 VERSION
 
-version 1.2006
+version 1.2007
 
 =head1 REPORT GRADES
 
@@ -127,7 +127,3 @@ This is free software, licensed under:
   The Apache License, Version 2.0, January 2004
 
 =cut
-
-
-__END__
-

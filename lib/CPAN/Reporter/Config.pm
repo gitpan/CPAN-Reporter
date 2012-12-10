@@ -1,6 +1,6 @@
 use strict;
 package CPAN::Reporter::Config;
-our $VERSION = '1.2006'; # VERSION
+our $VERSION = '1.2007'; # VERSION
 
 use Config::Tiny 2.08 ();
 use File::Glob ();
@@ -651,8 +651,6 @@ sub _validate_skipfile {
 
 # ABSTRACT: Config file options for CPAN::Reporter
 
-
-
 =pod
 
 =head1 NAME
@@ -661,7 +659,7 @@ CPAN::Reporter::Config - Config file options for CPAN::Reporter
 
 =head1 VERSION
 
-version 1.2006
+version 1.2007
 
 =head1 SYNOPSIS
 
@@ -979,7 +977,6 @@ This is free software, licensed under:
   The Apache License, Version 2.0, January 2004
 
 =cut
-
 
 __END__
 

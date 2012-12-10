@@ -1,6 +1,6 @@
 use strict;
 package CPAN::Reporter;
-our $VERSION = '1.2006'; # VERSION
+our $VERSION = '1.2007'; # VERSION
 
 use Config;
 use Capture::Tiny qw/ capture tee_merged /;
@@ -545,6 +545,7 @@ sub _downgrade_known_causes {
         last;
       }
       if( $line =~ /Perl .*? required.*?--this is only/ims ||
+        $line =~ /Perl version .*? or higher required\. We run/ims || #EU::MM
         $line =~ /ERROR: perl: Version .*? is installed, but we need version/ims ||
         $line =~ /ERROR: perl \(.*?\) is installed, but we need version/ims ||
         $line =~ /Error evaling version line 'BEGIN/ims ||
@@ -1470,8 +1471,6 @@ sub _version_finder {
 
 # ABSTRACT: Adds CPAN Testers reporting to CPAN.pm
 
-
-
 =pod
 
 =head1 NAME
@@ -1480,7 +1479,7 @@ CPAN::Reporter - Adds CPAN Testers reporting to CPAN.pm
 
 =head1 VERSION
 
-version 1.2006
+version 1.2007
 
 =head1 SYNOPSIS
 
@@ -1690,7 +1689,7 @@ L<CPAN::Reporter::FAQ> -- hints and tips
 =head2 Bugs / Feature Requests
 
 Please report any bugs or feature requests through the issue tracker
-at L<http://rt.cpan.org/Public/Dist/Display.html?Name=CPAN-Reporter>.
+at L<https://rt.cpan.org/Public/Dist/Display.html?Name=CPAN-Reporter>.
 You will be notified automatically of any progress on your issue.
 
 =head2 Source Code
@@ -1700,7 +1699,7 @@ public review and contribution under the terms of the license.
 
 L<https://github.com/dagolden/cpan-reporter>
 
-  git clone https://github.com/dagolden/cpan-reporter.git
+  git clone git://github.com/dagolden/cpan-reporter.git
 
 =head1 AUTHOR
 
@@ -1715,7 +1714,6 @@ This is free software, licensed under:
   The Apache License, Version 2.0, January 2004
 
 =cut
-
 
 __END__
 

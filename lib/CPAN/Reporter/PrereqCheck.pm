@@ -1,6 +1,6 @@
 use strict;
 package CPAN::Reporter::PrereqCheck;
-our $VERSION = '1.2006'; # VERSION
+our $VERSION = '1.2007'; # VERSION
 
 use ExtUtils::MakeMaker 6.36;
 use File::Spec;
@@ -123,7 +123,7 @@ sub _try_load {
 
 # ABSTRACT: Modulino for prerequisite tests
 
-
+__END__
 
 =pod
 
@@ -133,7 +133,7 @@ CPAN::Reporter::PrereqCheck - Modulino for prerequisite tests
 
 =head1 VERSION
 
-version 1.2006
+version 1.2007
 
 =head1 SYNOPSIS
 
@@ -191,7 +191,3 @@ This is free software, licensed under:
   The Apache License, Version 2.0, January 2004
 
 =cut
-
-
-__END__
-
