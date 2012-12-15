@@ -1,6 +1,6 @@
 use strict;
 package CPAN::Reporter::History;
-our $VERSION = '1.2007'; # VERSION
+our $VERSION = '1.2008'; # VERSION
 
 use vars qw/@ISA @EXPORT_OK/;
 
@@ -320,7 +320,7 @@ CPAN::Reporter::History - Read or write a CPAN::Reporter history log
 
 =head1 VERSION
 
-version 1.2007
+version 1.2008
 
 =head1 SYNOPSIS
 

@@ -1,6 +1,6 @@
 use strict;
 package CPAN::Reporter::PrereqCheck;
-our $VERSION = '1.2007'; # VERSION
+our $VERSION = '1.2008'; # VERSION
 
 use ExtUtils::MakeMaker 6.36;
 use File::Spec;
@@ -112,6 +112,10 @@ sub _try_load {
   if ( $module eq 'Module::Install' && $have < 0.95 ) {
     return 1;
   }
+  # loading Acme::Bleach bleaches *us*, so skip
+  elsif( $module eq 'Acme::Bleach' ) {
+    return 1;
+  }
 
   my $file = "$module.pm";
   $file =~ s{::}{/}g;
@@ -133,7 +137,7 @@ CPAN::Reporter::PrereqCheck - Modulino for prerequisite tests
 
 =head1 VERSION
 
-version 1.2007
+version 1.2008
 
 =head1 SYNOPSIS
 
