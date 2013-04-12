@@ -11,16 +11,7 @@ use ExtUtils::MakeMaker 6.30;
 my %WriteMakefileArgs = (
   "ABSTRACT" => "Adds CPAN Testers reporting to CPAN.pm",
   "AUTHOR" => "David Golden <dagolden\@cpan.org>",
-  "BUILD_REQUIRES" => {
-    "Archive::Tar" => "1.54",
-    "File::Copy::Recursive" => "0.35",
-    "File::Spec::Functions" => 0,
-    "File::pushd" => "0.32",
-    "IO::CaptureOutput" => "1.03",
-    "Test::Harness" => 0,
-    "Test::More" => "0.62",
-    "warnings" => 0
-  },
+  "BUILD_REQUIRES" => {},
   "CONFIGURE_REQUIRES" => {
     "ExtUtils::MakeMaker" => "6.30"
   },
@@ -55,12 +46,36 @@ my %WriteMakefileArgs = (
     "strict" => 0,
     "vars" => 0
   },
-  "VERSION" => "1.2009",
+  "TEST_REQUIRES" => {
+    "Archive::Tar" => "1.54",
+    "File::Copy::Recursive" => "0.35",
+    "File::Spec::Functions" => 0,
+    "File::pushd" => "0.32",
+    "IO::CaptureOutput" => "1.03",
+    "List::Util" => 0,
+    "Test::Harness" => 0,
+    "Test::More" => "0.62",
+    "warnings" => 0
+  },
+  "VERSION" => "1.2010",
   "test" => {
     "TESTS" => "t/*.t"
   }
 );
 
+
+unless ( eval { ExtUtils::MakeMaker->VERSION(6.63_03) } ) {
+  my $tr = delete $WriteMakefileArgs{TEST_REQUIRES};
+  my $br = $WriteMakefileArgs{BUILD_REQUIRES};
+  for my $mod ( keys %$tr ) {
+    if ( exists $br->{$mod} ) {
+      $br->{$mod} = $tr->{$mod} if $tr->{$mod} > $br->{$mod};
+    }
+    else {
+      $br->{$mod} = $tr->{$mod};
+    }
+  }
+}
 
 unless ( eval { ExtUtils::MakeMaker->VERSION(6.56) } ) {
   my $br = delete $WriteMakefileArgs{BUILD_REQUIRES};

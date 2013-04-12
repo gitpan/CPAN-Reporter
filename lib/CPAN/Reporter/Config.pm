@@ -1,6 +1,6 @@
 use strict;
 package CPAN::Reporter::Config;
-our $VERSION = '1.2009'; # VERSION
+our $VERSION = '1.2010'; # VERSION
 
 use Config::Tiny 2.08 ();
 use File::Glob ();
@@ -290,6 +290,9 @@ HERE
         default => undef,
     },
     debug => {
+        default => undef,
+    },
+    retry_submission => {
         default => undef,
     },
 );
@@ -653,13 +656,15 @@ sub _validate_skipfile {
 
 =pod
 
+=encoding utf-8
+
 =head1 NAME
 
 CPAN::Reporter::Config - Config file options for CPAN::Reporter
 
 =head1 VERSION
 
-version 1.2009
+version 1.2010
 
 =head1 SYNOPSIS
 
@@ -858,6 +863,11 @@ Test::Reporter will use environment variables C<<< VISUAL >>>, C<<< EDITOR >>> o
 
 =item *
 
+C<<< retry_submission >>> -- if greater than zero, CPAN::Reporter will try to
+resend the report after a few seconds in case the first attempt fails.
+
+=item *
+
 C<<< send_duplicates = <grade:action> ... >>> -- should duplicates of previous
 reports be sent, regardless of C<<< send_report >>>? (default:no)
 
@@ -967,6 +977,32 @@ L<CPAN::Reporter::FAQ>
 =head1 AUTHOR
 
 David Golden <dagolden@cpan.org>
+
+=head1 CONTRIBUTORS
+
+=over 4
+
+=item *
+
+Alexandr Ciornii <alexchorny@gmail.com>
+
+=item *
+
+Breno G. de Oliveira <garu@cpan.org>
+
+=item *
+
+Christian Walde <walde.christian@googlemail.com>
+
+=item *
+
+Kent Fredric <kentfredric@gmail.com>
+
+=item *
+
+Matthew Musgrove <mr.muskrat@gmail.com>
+
+=back
 
 =head1 COPYRIGHT AND LICENSE
 

@@ -1,6 +1,6 @@
 use strict; # make CPANTS happy
 package CPAN::Reporter::FAQ;
-our $VERSION = '1.2009'; # VERSION
+our $VERSION = '1.2010'; # VERSION
 
 1;
 
@@ -10,13 +10,15 @@ __END__
 
 =pod
 
+=encoding utf-8
+
 =head1 NAME
 
 CPAN::Reporter::FAQ - Answers and tips for using CPAN::Reporter
 
 =head1 VERSION
 
-version 1.2009
+version 1.2010
 
 =head1 REPORT GRADES
 
@@ -63,6 +65,11 @@ should be manually created prior to sending any reports, via the
 C<<< metabase-profile >>> program. Simply run it and fill in the information
 accordingly, and it will create the C<<< metabase_id.json >>> file for you. Move that
 file to your C<<< .cpanreporter >>> directory and you're all set.
+
+If you experience intermittent network issues, you can set the
+'retry_submission' option to make a second attempt at sending the report
+a few seconds later, in case the first one fails. This could be useful for
+extremely slow connections.
 
 Finally, lack of Internet connection or firewall filtering will prevent
 the report from reaching the CPAN Testers servers. If you are experiencing
@@ -117,6 +124,32 @@ L<Test::Reporter>
 =head1 AUTHOR
 
 David Golden <dagolden@cpan.org>
+
+=head1 CONTRIBUTORS
+
+=over 4
+
+=item *
+
+Alexandr Ciornii <alexchorny@gmail.com>
+
+=item *
+
+Breno G. de Oliveira <garu@cpan.org>
+
+=item *
+
+Christian Walde <walde.christian@googlemail.com>
+
+=item *
+
+Kent Fredric <kentfredric@gmail.com>
+
+=item *
+
+Matthew Musgrove <mr.muskrat@gmail.com>
+
+=back
 
 =head1 COPYRIGHT AND LICENSE
 

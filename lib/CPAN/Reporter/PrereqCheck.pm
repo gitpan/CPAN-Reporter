@@ -1,6 +1,6 @@
 use strict;
 package CPAN::Reporter::PrereqCheck;
-our $VERSION = '1.2009'; # VERSION
+our $VERSION = '1.2010'; # VERSION
 
 use ExtUtils::MakeMaker 6.36;
 use File::Spec;
@@ -132,13 +132,15 @@ __END__
 
 =pod
 
+=encoding utf-8
+
 =head1 NAME
 
 CPAN::Reporter::PrereqCheck - Modulino for prerequisite tests
 
 =head1 VERSION
 
-version 1.2009
+version 1.2010
 
 =head1 SYNOPSIS
 
@@ -186,6 +188,32 @@ L<CPAN::Reporter> -- main documentation
 =head1 AUTHOR
 
 David Golden <dagolden@cpan.org>
+
+=head1 CONTRIBUTORS
+
+=over 4
+
+=item *
+
+Alexandr Ciornii <alexchorny@gmail.com>
+
+=item *
+
+Breno G. de Oliveira <garu@cpan.org>
+
+=item *
+
+Christian Walde <walde.christian@googlemail.com>
+
+=item *
+
+Kent Fredric <kentfredric@gmail.com>
+
+=item *
+
+Matthew Musgrove <mr.muskrat@gmail.com>
+
+=back
 
 =head1 COPYRIGHT AND LICENSE
 

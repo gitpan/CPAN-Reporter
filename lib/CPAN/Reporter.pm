@@ -1,6 +1,6 @@
 use strict;
 package CPAN::Reporter;
-our $VERSION = '1.2009'; # VERSION
+our $VERSION = '1.2010'; # VERSION
 
 use Config;
 use Capture::Tiny qw/ capture tee_merged /;
@@ -495,6 +495,22 @@ TRANSPORT_REQUIRED
         }
         else {
             $CPAN::Frontend->mywarn( "CPAN::Reporter: " . $tr->errstr . "\n");
+
+            if ( $config->{retry_submission} ) {
+                sleep(3);
+
+                $CPAN::Frontend->mywarn( "CPAN::Reporter: second attempt\n");
+                $tr->errstr('');
+
+                if ( $tr->send() ) {
+                    CPAN::Reporter::History::_record_history( $result )
+                        if not $is_duplicate;
+                }
+                else {
+                    $CPAN::Frontend->mywarn( "CPAN::Reporter: " . $tr->errstr . "\n");
+                }
+            }
+
         }
     }
     else {
@@ -1473,13 +1489,15 @@ sub _version_finder {
 
 =pod
 
+=encoding utf-8
+
 =head1 NAME
 
 CPAN::Reporter - Adds CPAN Testers reporting to CPAN.pm
 
 =head1 VERSION
 
-version 1.2009
+version 1.2010
 
 =head1 SYNOPSIS
 
@@ -1704,6 +1722,32 @@ L<https://github.com/dagolden/cpan-reporter>
 =head1 AUTHOR
 
 David Golden <dagolden@cpan.org>
+
+=head1 CONTRIBUTORS
+
+=over 4
+
+=item *
+
+Alexandr Ciornii <alexchorny@gmail.com>
+
+=item *
+
+Breno G. de Oliveira <garu@cpan.org>
+
+=item *
+
+Christian Walde <walde.christian@googlemail.com>
+
+=item *
+
+Kent Fredric <kentfredric@gmail.com>
+
+=item *
+
+Matthew Musgrove <mr.muskrat@gmail.com>
+
+=back
 
 =head1 COPYRIGHT AND LICENSE
 

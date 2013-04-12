@@ -2,7 +2,7 @@ NAME
     CPAN::Reporter - Adds CPAN Testers reporting to CPAN.pm
 
 VERSION
-    version 1.2009
+    version 1.2010
 
 SYNOPSIS
     From the CPAN shell:
@@ -182,6 +182,17 @@ SUPPORT
 
 AUTHOR
     David Golden <dagolden@cpan.org>
+
+CONTRIBUTORS
+    *   Alexandr Ciornii <alexchorny@gmail.com>
+
+    *   Breno G. de Oliveira <garu@cpan.org>
+
+    *   Christian Walde <walde.christian@googlemail.com>
+
+    *   Kent Fredric <kentfredric@gmail.com>
+
+    *   Matthew Musgrove <mr.muskrat@gmail.com>
 
 COPYRIGHT AND LICENSE
     This software is Copyright (c) 2006 by David Golden.
