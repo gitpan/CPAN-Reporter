@@ -1,10 +1,12 @@
 use strict;
 package CPAN::Reporter;
-our $VERSION = '1.2010'; # VERSION
+our $VERSION = '1.2011'; # VERSION
 
 use Config;
 use Capture::Tiny qw/ capture tee_merged /;
-use CPAN 1.9301 ();
+use CPAN 1.94 ();
+#CPAN.pm was split into separate files in this version
+#set minimum to it for simplicity
 use CPAN::Version ();
 use File::Basename qw/basename dirname/;
 use File::Find ();
@@ -663,23 +665,23 @@ sub _expand_result {
 
 # Entries bracketed with "/" are taken to be a regex; otherwise literal
 my @env_vars= qw(
-    /PERL/
+    /HARNESS/
     /LC_/
+    /PERL/
+    /_TEST/
+    COMSPEC
+    INCLUDE
     LANG
     LANGUAGE
-    PATH
-    SHELL
-    COMSPEC
-    TERM
-    TEMP
-    TMPDIR
-    AUTOMATED_TESTING
-    /AUTHOR_TEST/
-    INCLUDE
-    LIB
     LD_LIBRARY_PATH
-    PROCESSOR_IDENTIFIER
+    LIB
     NUMBER_OF_PROCESSORS
+    PATH
+    PROCESSOR_IDENTIFIER
+    SHELL
+    TEMP
+    TERM
+    TMPDIR
 );
 
 sub _env_report {
@@ -913,7 +915,9 @@ sub _parse_test_harness {
 # _prereq_report
 #--------------------------------------------------------------------------#
 
-my @prereq_sections = qw/requires build_requires configure_requires/;
+my @prereq_sections = qw(
+  requires build_requires configure_requires opt_requires opt_build_requires
+);
 
 sub _prereq_report {
     my $dist = shift;
@@ -921,16 +925,20 @@ sub _prereq_report {
 
     # Extract requires/build_requires from CPAN dist
     my $prereq_pm = $dist->prereq_pm;
+
     if ( ref $prereq_pm eq 'HASH' ) {
-        # is it the new CPAN style with requires/build_requires?
-        if (join(q{ }, sort keys %$prereq_pm) eq "build_requires requires") {
-            $need{requires} = $prereq_pm->{requires}
-                if  ref $prereq_pm->{requires} eq 'HASH';
-            $need{build_requires} = $prereq_pm->{build_requires}
-                if ref $prereq_pm->{build_requires} eq 'HASH';
+        # CPAN 1.94 returns hash with requires/build_requires # so no need to support old style
+        foreach (values %$prereq_pm) {
+          if (defined && ref ne 'HASH') {
+             require Data::Dumper;
+             warn "Data error detecting prerequisites. Please report it to CPAN::Reporter bug tracker:";
+             warn Data::Dumper::Dumper($prereq_pm);
+             die "Stopping";
+          }
         }
-        else {
-            $need{requires} = $prereq_pm;
+
+        for my $sec ( @prereq_sections ) {
+            $need{$sec} = $prereq_pm->{$sec} if keys %{ $prereq_pm->{$sec} };
         }
     }
 
@@ -1421,7 +1429,7 @@ TRANSPORT_ARGS
     if ( ! -r $args{id_file} ) {
         $CPAN::Frontend->mywarn( <<"TRANSPORT_ARGS" );
 
-CPAN::Reporter: Could not find Metabase tranport 'id_file' parameter
+CPAN::Reporter: Could not find Metabase transport 'id_file' parameter
 located at '$args{id_file}'.
 See documentation for proper configuration of the 'transport' setting.
 
@@ -1489,7 +1497,7 @@ sub _version_finder {
 
 =pod
 
-=encoding utf-8
+=encoding UTF-8
 
 =head1 NAME
 
@@ -1497,7 +1505,7 @@ CPAN::Reporter - Adds CPAN Testers reporting to CPAN.pm
 
 =head1 VERSION
 
-version 1.2010
+version 1.2011
 
 =head1 SYNOPSIS
 
@@ -1707,7 +1715,7 @@ L<CPAN::Reporter::FAQ> -- hints and tips
 =head2 Bugs / Feature Requests
 
 Please report any bugs or feature requests through the issue tracker
-at L<https://rt.cpan.org/Public/Dist/Display.html?Name=CPAN-Reporter>.
+at L<https://github.com/cpan-testers/CPAN-Reporter/issues>.
 You will be notified automatically of any progress on your issue.
 
 =head2 Source Code
@@ -1715,9 +1723,9 @@ You will be notified automatically of any progress on your issue.
 This is open source software.  The code repository is available for
 public review and contribution under the terms of the license.
 
-L<https://github.com/dagolden/cpan-reporter>
+L<https://github.com/cpan-testers/CPAN-Reporter>
 
-  git clone git://github.com/dagolden/cpan-reporter.git
+  git clone https://github.com/cpan-testers/CPAN-Reporter.git
 
 =head1 AUTHOR
 

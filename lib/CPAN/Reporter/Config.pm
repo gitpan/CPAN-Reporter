@@ -1,6 +1,6 @@
 use strict;
 package CPAN::Reporter::Config;
-our $VERSION = '1.2010'; # VERSION
+our $VERSION = '1.2011'; # VERSION
 
 use Config::Tiny 2.08 ();
 use File::Glob ();
@@ -656,7 +656,7 @@ sub _validate_skipfile {
 
 =pod
 
-=encoding utf-8
+=encoding UTF-8
 
 =head1 NAME
 
@@ -664,7 +664,7 @@ CPAN::Reporter::Config - Config file options for CPAN::Reporter
 
 =head1 VERSION
 
-version 1.2010
+version 1.2011
 
 =head1 SYNOPSIS
 
@@ -977,32 +977,6 @@ L<CPAN::Reporter::FAQ>
 =head1 AUTHOR
 
 David Golden <dagolden@cpan.org>
-
-=head1 CONTRIBUTORS
-
-=over 4
-
-=item *
-
-Alexandr Ciornii <alexchorny@gmail.com>
-
-=item *
-
-Breno G. de Oliveira <garu@cpan.org>
-
-=item *
-
-Christian Walde <walde.christian@googlemail.com>
-
-=item *
-
-Kent Fredric <kentfredric@gmail.com>
-
-=item *
-
-Matthew Musgrove <mr.muskrat@gmail.com>
-
-=back
 
 =head1 COPYRIGHT AND LICENSE
 

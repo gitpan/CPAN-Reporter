@@ -2,7 +2,7 @@ NAME
     CPAN::Reporter - Adds CPAN Testers reporting to CPAN.pm
 
 VERSION
-    version 1.2010
+    version 1.2011
 
 SYNOPSIS
     From the CPAN shell:
@@ -169,16 +169,16 @@ SEE ALSO
 SUPPORT
   Bugs / Feature Requests
     Please report any bugs or feature requests through the issue tracker at
-    <https://rt.cpan.org/Public/Dist/Display.html?Name=CPAN-Reporter>. You
-    will be notified automatically of any progress on your issue.
+    <https://github.com/cpan-testers/CPAN-Reporter/issues>. You will be
+    notified automatically of any progress on your issue.
 
   Source Code
     This is open source software. The code repository is available for
     public review and contribution under the terms of the license.
 
-    <https://github.com/dagolden/cpan-reporter>
+    <https://github.com/cpan-testers/CPAN-Reporter>
 
-      git clone git://github.com/dagolden/cpan-reporter.git
+      git clone https://github.com/cpan-testers/CPAN-Reporter.git
 
 AUTHOR
     David Golden <dagolden@cpan.org>

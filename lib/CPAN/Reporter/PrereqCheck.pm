@@ -1,6 +1,6 @@
 use strict;
 package CPAN::Reporter::PrereqCheck;
-our $VERSION = '1.2010'; # VERSION
+our $VERSION = '1.2011'; # VERSION
 
 use ExtUtils::MakeMaker 6.36;
 use File::Spec;
@@ -107,15 +107,79 @@ sub _run {
 sub _try_load {
   my ($module, $have) = @_;
 
+  my @do_not_load = (
+    # should not be loaded directly
+    qw/Term::ReadLine::Perl Term::ReadLine::Gnu MooseX::HasDefaults Readonly::XS
+       POE::Loop::Event SOAP::Constants
+       Moose::Meta::TypeConstraint::Parameterizable Moose::Meta::TypeConstraint::Parameterized/,
+    'Devel::Trepan', #"require Enbugger; require Devel::Trepan;" starts debugging session
+
+    #removed modules
+    qw/Pegex::Mo YAML::LibYAML/,
+
+    #have additional prereqs
+    qw/Log::Dispatch::Email::MailSender RDF::NS::Trine Plack::Handler::FCGI Web::Scraper::LibXML/,
+
+    #modify @INC. 'lib' appearing in @INC will prevent correct
+    #checking of modules with XS part, for ex. List::Util
+    qw/ExtUtils::ParseXS ExtUtils::ParseXS::Utilities/,
+    
+    #require special conditions to run
+    qw/mylib/,
+
+    #do not return true value
+    qw/perlsecret/,
+  );
+
+  my %loading_conflicts = (
+    'signatures' => ['Catalyst'],
+    'Dancer::Plugin::FlashMessage' => ['Dancer::Plugin::FlashNote'],
+    'Dancer::Plugin::Mongoose' => ['Dancer::Plugin::DBIC'],
+    'Dancer::Plugin::DBIC' => ['Dancer::Plugin::Mongoose'],
+  ); #modules that conflict with each other
+  
+  my %load_before = (
+    'Tk::Font' => 'Tk',
+    'Tk::Widget' => 'Tk',
+    'Tk::Label' => 'Tk',
+    'Class::MOP::Class' => 'Class::MOP',
+    'Moose::Meta::TypeConstraint::Role' => 'Moose',
+    'Moose::Meta::TypeConstraint::Union' => 'Moose',
+    'Moose::Meta::Attribute::Native' => 'Class::MOP',
+    'Test::More::Hooks' => 'Test::More',
+  );
+
   # M::I < 0.95 dies in require, so we can't check if it loads
   # Instead we just pretend that it works
   if ( $module eq 'Module::Install' && $have < 0.95 ) {
+    return 1;
+  }
+  # circular dependency with Catalyst::Runtime, so this module
+  # does not depends on it, but still does not work without it.
+  elsif ( $module eq 'Catalyst::DispatchType::Regex' && $have <= 5.90032 ) {
+    return 1;
+  }
+  elsif (  grep { $_ eq $module } @do_not_load ) {
     return 1;
   }
   # loading Acme modules like Acme::Bleach can do bad things,
   # so never try to load them; just pretend that they work
   elsif( $module =~ /^Acme::/ ) {
     return 1;
+  }
+
+  if ( exists $loading_conflicts{$module} ) {
+      foreach my $mod1 ( @{ $loading_conflicts{$module} } ) {
+         my $file = "$mod1.pm";
+         $file =~ s{::}{/}g;
+         if (exists $INC{$file}) {
+             return 1;
+         }
+      }
+  }
+
+  if (exists $load_before{$module}) {
+      eval "require $load_before{$module};1;";
   }
 
   my $file = "$module.pm";
@@ -132,7 +196,7 @@ __END__
 
 =pod
 
-=encoding utf-8
+=encoding UTF-8
 
 =head1 NAME
 
@@ -140,7 +204,7 @@ CPAN::Reporter::PrereqCheck - Modulino for prerequisite tests
 
 =head1 VERSION
 
-version 1.2010
+version 1.2011
 
 =head1 SYNOPSIS
 
@@ -188,32 +252,6 @@ L<CPAN::Reporter> -- main documentation
 =head1 AUTHOR
 
 David Golden <dagolden@cpan.org>
-
-=head1 CONTRIBUTORS
-
-=over 4
-
-=item *
-
-Alexandr Ciornii <alexchorny@gmail.com>
-
-=item *
-
-Breno G. de Oliveira <garu@cpan.org>
-
-=item *
-
-Christian Walde <walde.christian@googlemail.com>
-
-=item *
-
-Kent Fredric <kentfredric@gmail.com>
-
-=item *
-
-Matthew Musgrove <mr.muskrat@gmail.com>
-
-=back
 
 =head1 COPYRIGHT AND LICENSE
 
